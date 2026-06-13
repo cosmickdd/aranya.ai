@@ -1,0 +1,14 @@
+# azure.yaml — Azure Developer CLI configuration for Aranya.ai
+
+projectName: aranya-ai
+services:
+  whatsapp-voice:
+    project: ./whatsapp_voice
+    language: python
+    host: appservice
+    docker:
+      path: ./Dockerfile
+      context: .
+    relatedTools:
+      - id: bicep
+        path: ./infra

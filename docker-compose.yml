@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  aranya-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_WHATSAPP_NUMBER=${TWILIO_WHATSAPP_NUMBER}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PUBLIC_URL=${PUBLIC_URL}
+      - DATA_GOV_API_KEY=${DATA_GOV_API_KEY:-}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+    volumes:
+      - ./whatsapp_voice:/app/whatsapp_voice
+      - aranya-audio:/app/whatsapp_voice/audio_cache
+      - aranya-db:/app/whatsapp_voice
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - aranya-network
+
+volumes:
+  aranya-audio:
+    driver: local
+  aranya-db:
+    driver: local
+
+networks:
+  aranya-network:
+    driver: bridge
