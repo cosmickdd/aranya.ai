@@ -1,0 +1,41 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            echo ">>> Pulling latest code..."
+            cd /opt/aranya
+            git pull origin main
+
+            echo ">>> Installing/updating dependencies..."
+            cd whatsapp_voice
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+
+            echo ">>> Restarting Aranya..."
+            sudo systemctl restart aranya
+
+            echo ">>> Health check..."
+            sleep 3
+            curl -sf http://localhost:5000/health | python3 -c "import sys,json; d=json.load(sys.stdin); print('Health:', d['status'])"
+
+            echo ">>> Deploy complete!"
