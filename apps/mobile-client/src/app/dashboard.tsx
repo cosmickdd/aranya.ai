@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
@@ -217,88 +218,60 @@ export default function Dashboard() {
     sendMessage(text, img);
   };
 
-  // ── Voice Recording via MediaRecorder + Sarvam STT ──
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-
-  const audioContextRef = useRef<AudioContext | null>(null);
+  // ── Voice Recording via Expo AV (Universal Web/iOS/Android) ──
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const silenceStartRef = useRef<number>(Date.now());
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        alert('Microphone access is required for voice chat. Please allow mic access.');
+        setVoiceState('idle');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+
+      recordingRef.current = recording;
       setVoiceState('listening');
       setVoiceTranscript('');
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        // Stop all mic tracks
-        stream.getTracks().forEach(t => t.stop());
-        if (audioContextRef.current) {
-          audioContextRef.current.close().catch(() => {});
-          audioContextRef.current = null;
-        }
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        // Abort if audio is tiny or user never spoke
-        if (audioBlob.size < 1000 || !hasSpokenRef.current) { 
-          setVoiceState('idle');
-          return;
-        }
-        await sendVoiceToBackend(audioBlob);
-      };
-
-      // --- Silence Detection Setup ---
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.minDecibels = -70; // Sensitivity to silence
-      source.connect(analyser);
-      
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      
-      let silenceStart = Date.now();
       hasSpokenRef.current = false;
+      silenceStartRef.current = Date.now();
 
-      const checkSilence = () => {
-        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+      recording.setOnRecordingStatusUpdate((status) => {
+        if (!status.isRecording) return;
         
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
+        // Metering provides dB from -160 (silent) to 0 (loudest)
+        const metering = status.metering || -160;
+        const now = Date.now();
 
-        // If average volume is above threshold, they are speaking
-        if (average > 2) { 
-          silenceStart = Date.now();
+        // -35 dB is a typical threshold for speaking voice
+        if (metering > -35) {
+          silenceStartRef.current = now;
           if (!hasSpokenRef.current) hasSpokenRef.current = true;
         } else {
-          const now = Date.now();
-          // If spoken and then silent for 1.5s, OR haven't spoken for 5s
-          if (hasSpokenRef.current && (now - silenceStart > 1500)) {
-             stopRecording();
-             return;
-          } else if (!hasSpokenRef.current && (now - silenceStart > 5000)) {
-             stopRecording();
-             return;
+          // 1.5 seconds of silence after speaking = stop
+          if (hasSpokenRef.current && (now - silenceStartRef.current > 1500)) {
+            stopRecording();
+          } 
+          // 5 seconds of total silence without ever speaking = stop
+          else if (!hasSpokenRef.current && (now - silenceStartRef.current > 5000)) {
+            stopRecording();
           }
         }
-        
-        requestAnimationFrame(checkSilence);
-      };
+      });
       
-      recorder.start();
-      checkSilence();
-      
+      // Update metering 10 times a second for fast VAD
+      recording.setProgressUpdateInterval(100);
+
     } catch (err) {
       console.error('Mic access error:', err);
       alert('Microphone access is required for voice chat. Please allow mic access.');
@@ -306,22 +279,49 @@ export default function Dashboard() {
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+  const stopRecording = async () => {
+    if (recordingRef.current) {
       setVoiceState('processing');
+      try {
+        await recordingRef.current.stopAndUnloadAsync();
+        const uri = recordingRef.current.getURI();
+        recordingRef.current = null;
+        
+        if (!hasSpokenRef.current || !uri) {
+          setVoiceState('idle');
+          return;
+        }
+        
+        await sendVoiceToBackend(uri);
+      } catch (err) {
+        console.error('Stop recording error:', err);
+        setVoiceState('idle');
+      }
     }
   };
 
-  const sendVoiceToBackend = async (audioBlob: Blob) => {
+  const sendVoiceToBackend = async (uri: string) => {
     setVoiceState('processing');
     setVoiceTranscript('Processing your voice...');
 
     try {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice.webm');
-      formData.append('language', i18n.locale);
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const audioBlob = await response.blob();
+        formData.append('audio', audioBlob, 'voice.webm');
+      } else {
+        // Native APK / IPA support
+        formData.append('audio', {
+          uri: uri,
+          name: Platform.OS === 'android' ? 'voice.m4a' : 'voice.caf',
+          type: Platform.OS === 'android' ? 'audio/m4a' : 'audio/x-caf',
+        } as any);
+      }
+
+      formData.append('language', i18n.locale || 'hi');
       formData.append('user_id', 'demo_user_123');
 
       const response = await fetch(`${apiUrl}/api/voice-chat`, {
@@ -399,12 +399,14 @@ export default function Dashboard() {
     startRecording();
   };
 
-  const exitVoiceMode = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      // Stop without triggering onstop processing
-      mediaRecorderRef.current.ondataavailable = null;
-      mediaRecorderRef.current.onstop = null;
-      mediaRecorderRef.current.stop();
+  const exitVoiceMode = async () => {
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.stopAndUnloadAsync();
+      } catch (e) {
+        console.error('Error stopping recording:', e);
+      }
+      recordingRef.current = null;
     }
     setVoiceMode(false);
     setIsVoiceMinimized(false);
@@ -674,9 +676,15 @@ export default function Dashboard() {
               <Camera color="#4b5563" size={20} />
             </Pressable>
           </View>
-          <Pressable style={cs.sendButton} onPress={handleSend}>
-            <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
-          </Pressable>
+          {inputText.trim().length > 0 || selectedImage ? (
+            <Pressable style={cs.sendButton} onPress={handleSend}>
+              <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
+            </Pressable>
+          ) : (
+            <Pressable style={cs.sendButton} onPress={enterVoiceMode}>
+              <Mic color="#ffffff" size={24} />
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
