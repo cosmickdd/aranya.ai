@@ -6,6 +6,7 @@ import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, Pho
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
+import { CameraView, Camera } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
@@ -88,6 +89,19 @@ export default function Dashboard() {
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
   const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | 'videonote'>('photo');
+  const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  
+  const cameraRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (cameraModalVisible) {
+      (async () => {
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasCameraPermission(status === 'granted');
+      })();
+    }
+  }, [cameraModalVisible]);
 
   const mockGallery = [
     { id: '1', url: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
@@ -200,6 +214,31 @@ export default function Dashboard() {
         setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
       }
     } catch (error) { console.error("Image pick error:", error); }
+  };
+
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.5,
+        });
+        if (photo && photo.uri) {
+          setSelectedImage(photo.uri);
+          setCameraModalVisible(false);
+        }
+      } catch (e) {
+        console.error('Failed to take picture, falling back to system camera:', e);
+        const options: ImagePicker.ImagePickerOptions = {
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true, quality: 0.5, base64: true,
+        };
+        const result = await ImagePicker.launchCameraAsync(options);
+        if (!result.canceled && result.assets?.[0]?.uri) {
+          setSelectedImage(result.assets[0].uri);
+          setCameraModalVisible(false);
+        }
+      }
+    }
   };
 
   // ── Send Message (shared by chat and voice) ──
@@ -776,11 +815,18 @@ export default function Dashboard() {
 
           {/* Viewfinder */}
           <View style={cms.viewfinder}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80' }} 
-              style={cms.viewfinderImage}
-              contentFit="cover"
-            />
+            {hasCameraPermission ? (
+              <CameraView 
+                style={cms.viewfinderImage} 
+                facing={cameraType} 
+                flash={flashMode}
+                ref={cameraRef}
+              />
+            ) : (
+              <View style={cms.noPermissionContainer}>
+                <Text style={cms.noPermissionText}>Requesting camera permission...</Text>
+              </View>
+            )}
             <View style={cms.viewfinderOverlay}>
               <View style={cms.focusRing} />
             </View>
@@ -832,26 +878,13 @@ export default function Dashboard() {
             {/* Shutter */}
             <Pressable 
               style={cms.shutterOuter}
-              onPress={async () => {
-                const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                if (status !== 'granted') { alert('Camera permission needed!'); return; }
-                
-                const options: ImagePicker.ImagePickerOptions = {
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: true, quality: 0.5, base64: true,
-                };
-                const result = await ImagePicker.launchCameraAsync(options);
-                if (!result.canceled && result.assets?.[0]?.base64) {
-                  setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
-                  setCameraModalVisible(false);
-                }
-              }}
+              onPress={takePicture}
             >
               <View style={cms.shutterInner} />
             </Pressable>
 
             {/* Flip camera */}
-            <Pressable style={cms.controlBtn} onPress={() => alert('Flipping camera...')}>
+            <Pressable style={cms.controlBtn} onPress={() => setCameraType(cameraType === 'back' ? 'front' : 'back')}>
               <RotateCw color="#fff" size={26} />
             </Pressable>
           </View>
@@ -960,6 +993,12 @@ const cms = StyleSheet.create({
   focusRing: {
     width: 80, height: 80, borderRadius: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
     borderStyle: 'dashed' as any,
+  },
+  noPermissionContainer: {
+    flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center',
+  },
+  noPermissionText: {
+    color: '#aaa', fontSize: 16, fontFamily: 'Inter_500Medium',
   },
   galleryContainer: { height: 80, marginVertical: 12 },
   galleryScroll: { paddingHorizontal: 16, gap: 10 },
