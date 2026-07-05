@@ -759,8 +759,13 @@ export default function Dashboard() {
 // VOICE SCREEN STYLES (WhatsApp Call Style)
 // ═══════════════════════════════════════════════════════
 const vs = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: '#0b141a' },
-  bg: { flex: 1 },
+  overlay: { 
+    position: 'absolute',
+    top: 0, bottom: 0, left: 0, right: 0,
+    width: '100%', height: '100%',
+    backgroundColor: '#0b141a',
+  },
+  bg: { flex: 1, width: '100%', height: '100%' },
   bgImage: { opacity: 0.05, resizeMode: 'repeat' },
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
