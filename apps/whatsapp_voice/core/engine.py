@@ -97,12 +97,14 @@ def generate_response(
     image_mime: str = "image/jpeg",
     voice_mode: bool = False,
     user_location: str = None,
+    language: str = None,
 ) -> str:
     """
     Core response generator. Used by both WhatsApp and Voice handlers.
     phone_id     : unique identifier (WhatsApp number or caller phone number)
     voice_mode   : if True, response is optimised for spoken audio (no markdown)
     user_location: farmer's city/district for weather queries
+    language     : ISO language code (e.g., 'hi', 'mr', 'ta') to force AI response language
     """
     client = _get_client()
     db = get_session()
@@ -143,6 +145,16 @@ def generate_response(
         contents.append(types.Content(role="user", parts=current_parts))
 
         system = ARANYA_SOUL
+        
+        if language:
+            language_map = {
+                'en': 'English', 'hi': 'Hindi', 'ta': 'Tamil', 'te': 'Telugu',
+                'mr': 'Marathi', 'bn': 'Bengali', 'gu': 'Gujarati', 
+                'kn': 'Kannada', 'pa': 'Punjabi', 'ks': 'Kashmiri'
+            }
+            lang_name = language_map.get(language, 'Hindi')
+            system += f"\n\n=== STRICT LANGUAGE RULE ===\nThe user has explicitly selected {lang_name} as their language in the app settings. You MUST reply completely in {lang_name}. Do NOT reply in any other language."
+
         if voice_mode:
             system += "\n\nIMPORTANT: This is a voice call. Reply in 2-3 spoken sentences only. No lists, no symbols."
 

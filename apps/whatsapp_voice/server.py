@@ -237,14 +237,37 @@ def api_chat():
     data = request.get_json() or {}
     msg = data.get("message", "")
     user_id = data.get("user_id", "anonymous_mobile_user")
+    language = data.get("language", "")
+    image_base64 = data.get("image_base64", None)
     
-    if not msg:
-        return jsonify({"error": "Missing message"}), 400
+    if not msg and not image_base64:
+        return jsonify({"error": "Missing message or image"}), 400
         
+    import base64
+    image_bytes = None
+    image_mime = "image/jpeg"
+    
+    if image_base64:
+        try:
+            if "," in image_base64:
+                header, image_base64 = image_base64.split(",", 1)
+                if "png" in header:
+                    image_mime = "image/png"
+            image_bytes = base64.b64decode(image_base64)
+        except Exception as e:
+            logger.error(f"Base64 decode error: {e}")
+            
     try:
         from core.engine import generate_response
         # We pass voice_mode=False for the chat UI
-        ai_text = generate_response(phone_id=user_id, user_text=msg, voice_mode=False)
+        ai_text = generate_response(
+            phone_id=user_id, 
+            user_text=msg or "What is in this image?", 
+            voice_mode=False, 
+            language=language,
+            image_bytes=image_bytes,
+            image_mime=image_mime
+        )
         return jsonify({"reply": ai_text})
     except Exception as e:
         logger.error(f"/api/chat error: {e}")

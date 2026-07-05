@@ -1,50 +1,112 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Phone, Paperclip, Camera, Send } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X } from 'lucide-react-native';
+import Animated, { FadeInUp, FadeIn, FadeOutUp } from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
+import i18n from '../lib/i18n';
 
 type Message = {
   id: string;
   text: string;
   isSender: boolean;
   hasCallAction?: boolean;
+  timestamp?: string;
+  status?: 'sent' | 'delivered' | 'read';
+  image_base64?: string;
 };
-
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: '1',
-    text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
-    isSender: false,
-    hasCallAction: true,
-  }
-];
 
 export default function Dashboard() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
-  const [inputText, setInputText] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
-
+  const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
+  // Call State
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+      isSender: false,
+      hasCallAction: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
+  ]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isCallActive) {
+      interval = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [isCallActive]);
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const pickImage = async (useCamera = false) => {
+    try {
+      let result;
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.5,
+        base64: true,
+      };
+
+      if (useCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Sorry, we need camera permissions to make this work!');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync(options);
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync(options);
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      }
+    } catch (error) {
+      console.error("Image pick error:", error);
+    }
+  };
 
   const handleSend = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !selectedImage) return;
     
     const userText = inputText.trim();
+    const b64Img = selectedImage;
+    
     const newMessage: Message = {
       id: Date.now().toString(),
       text: userText,
       isSender: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sent',
+      image_base64: b64Img || undefined,
     };
     
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
+    setSelectedImage(null);
     setIsTyping(true);
     
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
       const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: {
@@ -52,17 +114,23 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           message: userText,
-          user_id: 'demo_user_123'
+          user_id: 'demo_user_123',
+          language: i18n.locale,
+          image_base64: b64Img
         }),
       });
       
       const data = await response.json();
+      
+      // Update all sent messages to 'read' since the AI has replied
+      setMessages(prev => prev.map(m => m.isSender ? { ...m, status: 'read' } : m));
       
       if (data.reply) {
         const reply: Message = {
           id: (Date.now() + 1).toString(),
           text: data.reply,
           isSender: false,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
         setMessages(prev => [...prev, reply]);
       }
@@ -72,6 +140,7 @@ export default function Dashboard() {
         id: (Date.now() + 1).toString(),
         text: 'Sorry, I am having trouble connecting to the server right now. Please try again later.',
         isSender: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
     } finally {
       setIsTyping(false);
@@ -79,9 +148,9 @@ export default function Dashboard() {
   };
 
   const handleJoinCall = async () => {
+    setIsCallActive(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
-      // Pass a dummy phone number for the prototype call test
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
       await fetch(`${apiUrl}/test-call`, {
         method: 'POST',
         headers: {
@@ -92,10 +161,8 @@ export default function Dashboard() {
           message: "Namaste! Connecting you to Aranya Voice..."
         }),
       });
-      alert('Call initiated! (Check backend logs for Twilio status)');
     } catch (error) {
       console.error('Voice Call Error:', error);
-      alert('Failed to initiate voice call.');
     }
   };
 
@@ -108,7 +175,6 @@ export default function Dashboard() {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            {/* Back button removed per user request */}
             <View style={styles.avatar}>
               <Image 
                 source={require('../../assets/images/logo.png')} 
@@ -118,13 +184,35 @@ export default function Dashboard() {
             </View>
             <View>
               <Text style={styles.headerName}>Aranya</Text>
-              <Text style={styles.headerStatus}>Online</Text>
+              {isTyping ? (
+                <Animated.Text entering={FadeIn} style={[styles.headerStatus, { color: '#fb923c' }]}>
+                  typing...
+                </Animated.Text>
+              ) : (
+                <Animated.Text entering={FadeIn} style={styles.headerStatus}>
+                  Online
+                </Animated.Text>
+              )}
             </View>
           </View>
-          <Pressable style={styles.phoneButton}>
+          <Pressable style={styles.phoneButton} onPress={handleJoinCall}>
             <Phone color="#000" size={24} />
           </Pressable>
         </View>
+
+        {/* Active Call Banner */}
+        {isCallActive && (
+          <Animated.View entering={FadeInUp} exiting={FadeOutUp} style={styles.activeCallBanner}>
+            <View style={styles.callBannerLeft}>
+              <View style={styles.pulsingDot} />
+              <Text style={styles.callBannerText}>Tap to return to call</Text>
+              <Text style={styles.callBannerTime}>{formatDuration(callDuration)}</Text>
+            </View>
+            <Pressable style={styles.endCallButton} onPress={() => setIsCallActive(false)}>
+              <Phone color="#fff" size={14} style={{ transform: [{ rotate: '135deg' }] }} />
+            </Pressable>
+          </Animated.View>
+        )}
 
         {/* Chat Area */}
         <ImageBackground 
@@ -153,20 +241,48 @@ export default function Dashboard() {
                   msg.isSender ? styles.sentBubble : styles.receivedBubble
                 ]}
               >
-                <Text style={msg.isSender ? styles.sentText : styles.receivedText}>
-                  {msg.text}
-                </Text>
+                {msg.image_base64 && (
+                  <Image source={{ uri: msg.image_base64 }} style={styles.messageImage} contentFit="cover" />
+                )}
+
+                {!!msg.text && (
+                  <Text style={msg.isSender ? styles.sentText : styles.receivedText}>
+                    {msg.text}
+                  </Text>
+                )}
                 
-                {msg.hasCallAction && (
+                {msg.hasCallAction && !isCallActive && (
                   <Pressable style={styles.callActionButton} onPress={handleJoinCall}>
                     <Phone color="#10b981" size={16} />
                     <Text style={styles.callActionText}>Join Voice Call</Text>
                   </Pressable>
                 )}
+
+                <View style={styles.messageFooter}>
+                  <Text style={msg.isSender ? styles.sentTime : styles.receivedTime}>
+                    {msg.timestamp || '10:00 AM'}
+                  </Text>
+                  {msg.isSender && msg.status === 'sent' && (
+                    <Check color="#ffedd5" size={14} style={styles.tickIcon} />
+                  )}
+                  {msg.isSender && msg.status === 'read' && (
+                    <CheckCheck color="#34B7F1" size={15} style={styles.tickIcon} />
+                  )}
+                </View>
               </Animated.View>
             ))}
           </ScrollView>
         </ImageBackground>
+
+        {/* Selected Image Preview before sending */}
+        {selectedImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selectedImage }} style={styles.imagePreview} contentFit="cover" />
+            <Pressable style={styles.removeImageBtn} onPress={() => setSelectedImage(null)}>
+              <X color="#fff" size={16} />
+            </Pressable>
+          </View>
+        )}
 
         {/* Input Area */}
         <View style={styles.inputArea}>
@@ -179,10 +295,10 @@ export default function Dashboard() {
               onChangeText={setInputText}
               onSubmitEditing={handleSend}
             />
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={() => pickImage(false)}>
               <Paperclip color="#4b5563" size={20} />
             </Pressable>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={() => pickImage(true)}>
               <Camera color="#4b5563" size={20} />
             </Pressable>
           </View>
@@ -244,9 +360,48 @@ const styles = StyleSheet.create({
     padding: 8,
     marginRight: -8,
   },
+  activeCallBanner: {
+    backgroundColor: '#10b981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    zIndex: 9,
+  },
+  callBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pulsingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
+    marginRight: 8,
+  },
+  callBannerText: {
+    color: '#ffffff',
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    marginRight: 8,
+  },
+  callBannerTime: {
+    color: '#ffffff',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+  },
+  endCallButton: {
+    backgroundColor: '#ef4444',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   chatArea: {
     flex: 1,
-    backgroundColor: '#e5ddd5', // fallback background color if image fails
+    backgroundColor: '#e5ddd5',
   },
   chatContent: {
     padding: 16,
@@ -306,6 +461,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     lineHeight: 22,
   },
+  messageImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 6,
+  },
+  sentTime: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  receivedTime: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: '#9ca3af',
+  },
+  tickIcon: {
+    marginLeft: 4,
+  },
   callActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -324,30 +504,50 @@ const styles = StyleSheet.create({
     color: '#10b981',
     marginLeft: 8,
   },
+  imagePreviewContainer: {
+    padding: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    flexDirection: 'row',
+  },
+  imagePreview: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 6,
+    left: 68,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   inputArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 24, // Extra padding for bottom safe area
-    backgroundColor: 'transparent',
+    paddingBottom: 24,
+    backgroundColor: '#ffffff',
   },
   inputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f3f4f6',
     borderRadius: 24,
     paddingHorizontal: 16,
     minHeight: 48,
     marginRight: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
   },
   textInput: {
     flex: 1,
