@@ -229,7 +229,8 @@ def test_call():
 def api_chat():
     """
     REST endpoint for the mobile app chat interface.
-    POST /api/chat  JSON: {"message": "Hello", "user_id": "app_user_123"}
+    POST /api/chat  JSON: {"message": "Hello", "user_id": "app_user_123", "language": "hi"}
+    Returns: {"reply": "...", "audio_base64": "..."}
     """
     if request.method == "OPTIONS":
         return ("", 204)
@@ -237,7 +238,7 @@ def api_chat():
     data = request.get_json() or {}
     msg = data.get("message", "")
     user_id = data.get("user_id", "anonymous_mobile_user")
-    language = data.get("language", "")
+    language = data.get("language", "en")
     image_base64 = data.get("image_base64", None)
     
     if not msg and not image_base64:
@@ -259,16 +260,37 @@ def api_chat():
             
     try:
         from core.engine import generate_response
-        # We pass voice_mode=False for the chat UI
+        from services.sarvam import translate_text, text_to_speech
+        
+        # Step 1: If user writes in a non-English language, translate to English for Gemini
+        gemini_input = msg or "What is in this image?"
+        if language and language != "en":
+            gemini_input = translate_text(msg, source_lang=language, target_lang="en")
+            logger.info(f"Translated user input to English: {gemini_input[:80]}...")
+        
+        # Step 2: Get AI response from Gemini (always in English for consistency)
         ai_text = generate_response(
             phone_id=user_id, 
-            user_text=msg or "What is in this image?", 
+            user_text=gemini_input, 
             voice_mode=False, 
-            language=language,
+            language="en",  # Always get English from Gemini
             image_bytes=image_bytes,
             image_mime=image_mime
         )
-        return jsonify({"reply": ai_text})
+        
+        # Step 3: Translate Gemini's English response to user's language via Sarvam
+        translated_reply = ai_text
+        if language and language != "en":
+            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language)
+            logger.info(f"Translated AI reply to {language}: {translated_reply[:80]}...")
+        
+        # Step 4: Generate TTS audio of the translated response via Sarvam
+        audio_b64 = text_to_speech(translated_reply, language=language)
+        
+        return jsonify({
+            "reply": translated_reply,
+            "audio_base64": audio_b64,
+        })
     except Exception as e:
         logger.error(f"/api/chat error: {e}")
         return jsonify({"error": "Failed to generate response"}), 500

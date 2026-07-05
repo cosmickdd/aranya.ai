@@ -53,10 +53,8 @@ export default function LanguageSelection() {
           </Animated.View>
         </View>
 
-        <ScrollView 
+        <View 
           style={styles.scrollContainer} 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
         >
           <View style={styles.grid}>
             {LANGUAGES.map((lang, index) => {
@@ -85,7 +83,7 @@ export default function LanguageSelection() {
               );
             })}
           </View>
-        </ScrollView>
+        </View>
 
         <Animated.View entering={FadeInUp.delay(600).duration(600).springify()} style={styles.footer}>
           <Pressable 
@@ -122,24 +120,24 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 32,
+    marginTop: 20,
+    marginBottom: 20,
   },
   iconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#f0fdf4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   title: {
     fontFamily: 'Inter_800ExtraBold',
-    fontSize: 32,
+    fontSize: 28,
     color: '#0b3b24',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
@@ -153,7 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
   grid: {
     flexDirection: 'row',
@@ -162,10 +160,10 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     width: '48%',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   langCard: {
-    height: 90,
+    height: 70,
     borderRadius: 20,
     borderWidth: 2,
     borderColor: '#f0f2f5',
@@ -193,9 +191,9 @@ const styles = StyleSheet.create({
   },
   langNative: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 20,
+    fontSize: 18,
     color: '#363b41',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   langNativeSelected: {
     color: '#0b3b24',
@@ -210,11 +208,11 @@ const styles = StyleSheet.create({
   },
   checkWrapper: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#17c690',
     justifyContent: 'center',
     alignItems: 'center',
