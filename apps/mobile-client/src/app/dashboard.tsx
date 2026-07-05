@@ -7,7 +7,6 @@ import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnim
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { CameraView, Camera, useCameraPermissions } from 'expo-camera';
-import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
@@ -68,6 +67,8 @@ type Message = {
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
+const MediaLibrary = Platform.OS !== 'web' ? require('expo-media-library') : null;
+
 export default function Dashboard() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -99,6 +100,16 @@ export default function Dashboard() {
   const cameraRef = useRef<any>(null);
 
   const loadGalleryPhotos = async () => {
+    if (Platform.OS === 'web' || !MediaLibrary) {
+      setGalleryPhotos([
+        { id: '1', uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
+        { id: '2', uri: 'https://images.unsplash.com/photo-1536630590251-40439a0f675f?w=200&q=80' },
+        { id: '3', uri: 'https://images.unsplash.com/photo-1551893086-c02cbf3a9a88?w=200&q=80' },
+        { id: '4', uri: 'https://images.unsplash.com/photo-1600697395593-e9dc66797e43?w=200&q=80' },
+      ]);
+      return;
+    }
+
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status === 'granted') {
@@ -107,18 +118,12 @@ export default function Dashboard() {
           sortBy: [MediaLibrary.SortBy.creationTime],
           mediaType: [MediaLibrary.MediaType.photo],
         });
-        setGalleryPhotos(assets.map(a => ({ id: a.id, uri: a.uri })));
+        setGalleryPhotos(assets.map((a: any) => ({ id: a.id, uri: a.uri })));
       } else {
         throw new Error('Permission denied');
       }
     } catch (e) {
-      console.log('Using fallback mock gallery (expected on web):', e);
-      setGalleryPhotos([
-        { id: '1', uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
-        { id: '2', uri: 'https://images.unsplash.com/photo-1536630590251-40439a0f675f?w=200&q=80' },
-        { id: '3', uri: 'https://images.unsplash.com/photo-1551893086-c02cbf3a9a88?w=200&q=80' },
-        { id: '4', uri: 'https://images.unsplash.com/photo-1600697395593-e9dc66797e43?w=200&q=80' },
-      ]);
+      console.log('Native MediaLibrary error:', e);
     }
   };
 
