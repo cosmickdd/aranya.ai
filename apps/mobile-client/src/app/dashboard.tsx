@@ -810,7 +810,7 @@ export default function Dashboard() {
             </View>
           </View>
           <View style={cs.headerRight}>
-            <Pressable style={cs.phoneButton} onPress={enterVoiceMode}>
+            <Pressable style={cs.phoneButton} onPress={toggleVoiceMode}>
               <Phone color="#000" size={22} />
             </Pressable>
             <Pressable style={cs.menuButton} onPress={() => setMenuVisible(true)}>
@@ -896,7 +896,7 @@ export default function Dashboard() {
                   <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
                 )}
                 {msg.hasCallAction && (
-                  <Pressable style={cs.callActionButton} onPress={enterVoiceMode}>
+                  <Pressable style={cs.callActionButton} onPress={toggleVoiceMode}>
                     <Phone color="#10b981" size={16} />
                     <Text style={cs.callActionText}>Start Voice Chat</Text>
                   </Pressable>
