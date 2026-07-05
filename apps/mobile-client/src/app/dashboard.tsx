@@ -6,7 +6,7 @@ import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
-import { CameraView, Camera } from 'expo-camera';
+import { CameraView, Camera, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
@@ -90,18 +90,17 @@ export default function Dashboard() {
   const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | 'videonote'>('photo');
   const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  
+  const [permission, requestPermission] = useCameraPermissions();
+  const hasCameraPermission = permission ? permission.granted : false;
   
   const cameraRef = useRef<any>(null);
 
   useEffect(() => {
-    if (cameraModalVisible) {
-      (async () => {
-        const { status } = await Camera.requestCameraPermissionsAsync();
-        setHasCameraPermission(status === 'granted');
-      })();
+    if (cameraModalVisible && (!permission || !permission.granted)) {
+      requestPermission();
     }
-  }, [cameraModalVisible]);
+  }, [cameraModalVisible, permission]);
 
   const mockGallery = [
     { id: '1', url: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
@@ -868,11 +867,6 @@ export default function Dashboard() {
               }}
             >
               <ImageIcon color="#fff" size={26} />
-            </Pressable>
-
-            {/* Filter */}
-            <Pressable style={cms.controlBtn} onPress={() => alert('Filters coming soon!')}>
-              <Wand2 color="#fff" size={26} />
             </Pressable>
 
             {/* Shutter */}
