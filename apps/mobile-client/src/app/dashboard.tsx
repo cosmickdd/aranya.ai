@@ -483,9 +483,7 @@ export default function Dashboard() {
                 <Text style={vs.encryptionText}>End-to-end encrypted</Text>
               </View>
             </View>
-            <Pressable style={vs.iconBtn}>
-              <UserPlus color="#fff" size={24} />
-            </Pressable>
+            <View style={{ width: 44 }} /> {/* Placeholder to keep header title perfectly centered */}
           </View>
 
           {/* Center — Avatar */}
