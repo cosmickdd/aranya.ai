@@ -969,7 +969,7 @@ export default function Dashboard() {
               <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
             </Pressable>
           ) : (
-            <Pressable style={cs.sendButton} onPress={enterVoiceMode}>
+            <Pressable style={cs.sendButton} onPress={toggleVoiceMode}>
               <Mic color="#ffffff" size={24} />
             </Pressable>
           )}
