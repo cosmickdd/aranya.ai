@@ -1,23 +1,37 @@
 {
   "expo": {
-    "name": "mobile-client",
-    "slug": "mobile-client",
+    "name": "Aranya AI",
+    "slug": "aranya-ai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobileclient",
+    "scheme": "aranyaai",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.aranya.ai",
+      "icon": "./assets/images/icon.png",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Allow Aranya to access your microphone for voice calls.",
+        "NSCameraUsageDescription": "Allow Aranya to access your camera to photograph your crops.",
+        "NSPhotoLibraryUsageDescription": "Allow Aranya to access your photos so you can attach them to messages."
+      }
     },
     "android": {
-      "package": "com.aranya.app",
+      "package": "com.aranya.ai",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.INTERNET"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -39,6 +53,26 @@
         "expo-av",
         {
           "microphonePermission": "Allow Aranya to access your microphone to listen to you during voice calls."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Aranya to access your camera to take pictures of your crops."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Aranya to access your photos so you can attach them to messages.",
+          "savePhotosPermission": "Allow Aranya to save photos to your gallery."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Aranya to access your photos to attach to messages.",
+          "cameraPermission": "Allow Aranya to use your camera to photograph your crops."
         }
       ]
     ],

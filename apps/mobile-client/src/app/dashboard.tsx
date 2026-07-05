@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
 // ═══════════════════════════════════════════════════════
-// AUDIO HELPERS — using Web Audio API for reliable playback
+// AUDIO HELPERS — cross-platform (Web Audio API on web, expo-av on native)
 // ═══════════════════════════════════════════════════════
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binaryString = atob(base64);
@@ -24,7 +24,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 }
 
 let _audioCtx: AudioContext | null = null;
-function getAudioContext(): AudioContext {
+function getWebAudioContext(): AudioContext {
   if (!_audioCtx) {
     _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
@@ -32,9 +32,36 @@ function getAudioContext(): AudioContext {
 }
 
 async function playBase64Audio(base64: string): Promise<void> {
+  if (Platform.OS !== 'web') {
+    // ── Native (Android / iOS APK) ── use expo-av Sound
+    let sound: Audio.Sound | null = null;
+    try {
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      const { sound: s } = await Audio.Sound.createAsync(
+        { uri: `data:audio/mpeg;base64,${base64}` },
+        { shouldPlay: true }
+      );
+      sound = s;
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 60000); // safety timeout
+        s.setOnPlaybackStatusUpdate((status: any) => {
+          if (status.isLoaded && status.didJustFinish) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+    } catch (e) {
+      console.error('Native audio playback error:', e);
+    } finally {
+      if (sound) { try { await sound.unloadAsync(); } catch (_) {} }
+    }
+    return;
+  }
+  // ── Web ── Web Audio API
   return new Promise(async (resolve, reject) => {
     try {
-      const ctx = getAudioContext();
+      const ctx = getWebAudioContext();
       if (ctx.state === 'suspended') await ctx.resume();
       const arrayBuffer = base64ToArrayBuffer(base64);
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
@@ -44,7 +71,7 @@ async function playBase64Audio(base64: string): Promise<void> {
       source.onended = () => resolve();
       source.start(0);
     } catch (e) {
-      console.error('Audio playback error:', e);
+      console.error('Web audio playback error:', e);
       reject(e);
     }
   });
@@ -82,6 +109,8 @@ export default function Dashboard() {
 
   // Voice Mode
   const [voiceMode, setVoiceMode] = useState(false);
+  const voiceModeRef = useRef(false); // stable ref to avoid stale closure in async callbacks
+  useEffect(() => { voiceModeRef.current = voiceMode; }, [voiceMode]);
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [callDuration, setCallDuration] = useState(0);
   const [voiceTranscript, setVoiceTranscript] = useState('');
@@ -235,7 +264,10 @@ export default function Dashboard() {
       let result;
       if (useCamera) {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') { alert('Camera permission needed!'); return; }
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Camera access is needed to take photos. Please enable it in your device Settings.');
+          return;
+        }
         result = await ImagePicker.launchCameraAsync(options);
       } else {
         result = await ImagePicker.launchImageLibraryAsync(options);
@@ -251,9 +283,14 @@ export default function Dashboard() {
       try {
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.5,
+          base64: true, // required so the image can be sent to the AI backend
         });
         if (photo && photo.uri) {
-          setSelectedImage(photo.uri);
+          // Use base64 data URI so it can be sent to the backend for analysis
+          const imageData = photo.base64
+            ? `data:image/jpeg;base64,${photo.base64}`
+            : photo.uri;
+          setSelectedImage(imageData);
           setCameraModalVisible(false);
         }
       } catch (e) {
@@ -263,8 +300,9 @@ export default function Dashboard() {
           allowsEditing: true, quality: 0.5, base64: true,
         };
         const result = await ImagePicker.launchCameraAsync(options);
-        if (!result.canceled && result.assets?.[0]?.uri) {
-          setSelectedImage(result.assets[0].uri);
+        if (!result.canceled && result.assets?.[0]) {
+          const asset = result.assets[0];
+          setSelectedImage(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
           setCameraModalVisible(false);
         }
       }
@@ -353,7 +391,11 @@ export default function Dashboard() {
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
-        alert('Microphone access is required for voice chat. Please allow mic access.');
+        Alert.alert(
+          'Microphone Permission Required',
+          'Aranya needs microphone access for voice chat. Please enable it in your device Settings.',
+          [{ text: 'OK' }]
+        );
         setVoiceState('idle');
         return;
       }
@@ -401,7 +443,11 @@ export default function Dashboard() {
 
     } catch (err) {
       console.error('Mic access error:', err);
-      alert('Microphone access is required for voice chat. Please allow mic access.');
+      Alert.alert(
+        'Microphone Error',
+        'Could not start microphone. Please check your device permissions in Settings.',
+        [{ text: 'OK' }]
+      );
       setVoiceState('idle');
     }
   };
@@ -505,9 +551,9 @@ export default function Dashboard() {
 
       // Auto-restart listening after speaking (continuous call feel)
       setVoiceState('idle');
-      // Small delay before auto-restarting to feel natural
+      // Use voiceModeRef.current (not voiceMode) to avoid stale closure on Android/iOS
       setTimeout(() => {
-        if (voiceMode) startRecording();
+        if (voiceModeRef.current) startRecording();
       }, 1500);
 
     } catch (error) {
