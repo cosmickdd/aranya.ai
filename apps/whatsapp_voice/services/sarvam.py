@@ -127,3 +127,49 @@ def text_to_speech(text: str, language: str = "hi") -> str:
     except Exception as e:
         logger.error(f"Sarvam TTS error: {e}")
         return ""
+
+
+def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "audio/webm") -> str:
+    """
+    Transcribe audio using Sarvam STT API (saaras:v2).
+    audio_bytes : raw bytes of the audio file
+    language    : short language code
+    mime_type   : MIME type of the audio
+    Returns transcribed text or empty string on failure.
+    """
+    if not SARVAM_API_KEY:
+        logger.warning("SARVAM_API_KEY not set, skipping STT")
+        return ""
+
+    lang_code = LANG_MAP.get(language, "hi-IN")
+
+    try:
+        # Sarvam STT uses multipart/form-data
+        import io
+        ext = "webm" if "webm" in mime_type else "wav"
+        files = {
+            "file": (f"audio.{ext}", io.BytesIO(audio_bytes), mime_type),
+        }
+        data = {
+            "language_code": lang_code,
+            "model": "saaras:v2",
+            "with_timestamps": "false",
+        }
+        headers = {
+            "api-subscription-key": SARVAM_API_KEY,
+        }
+        resp = requests.post(
+            f"{SARVAM_BASE}/speech-to-text",
+            headers=headers,
+            files=files,
+            data=data,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        transcript = result.get("transcript", "")
+        logger.info(f"Sarvam STT OK: {lang_code}, transcript: {transcript[:80]}...")
+        return transcript
+    except Exception as e:
+        logger.error(f"Sarvam STT error: {e}")
+        return ""

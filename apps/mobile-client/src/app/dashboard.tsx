@@ -1,13 +1,56 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, MicOff, Volume2, PhoneOff } from 'lucide-react-native';
-import Animated, { FadeInUp, FadeIn, FadeOut, FadeInDown, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare } from 'lucide-react-native';
+import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
+// ═══════════════════════════════════════════════════════
+// AUDIO HELPERS — using Web Audio API for reliable playback
+// ═══════════════════════════════════════════════════════
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+let _audioCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return _audioCtx;
+}
+
+async function playBase64Audio(base64: string): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const ctx = getAudioContext();
+      if (ctx.state === 'suspended') await ctx.resume();
+      const arrayBuffer = base64ToArrayBuffer(base64);
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      source.onended = () => resolve();
+      source.start(0);
+    } catch (e) {
+      console.error('Audio playback error:', e);
+      reject(e);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════
 type Message = {
   id: string;
   text: string;
@@ -19,6 +62,9 @@ type Message = {
   audio_base64?: string;
 };
 
+// ═══════════════════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════════════════
 export default function Dashboard() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -26,12 +72,15 @@ export default function Dashboard() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  // Voice Mode State
+  // Voice Mode
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [callDuration, setCallDuration] = useState(0);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
+  const hasSpokenRef = useRef(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -54,60 +103,33 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [voiceMode]);
 
-  // Cleanup sound on unmount
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-    };
-  }, []);
-
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
+  // ── Audio Playback ──
   const playAudio = async (audioBase64: string, msgId: string) => {
     try {
-      // Stop previous
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-
-      if (playingId === msgId) {
-        setPlayingId(null);
-        return;
-      }
-
+      if (playingId === msgId) { setPlayingId(null); return; }
       setPlayingId(msgId);
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/wav;base64,${audioBase64}` },
-        { shouldPlay: true }
-      );
-      soundRef.current = sound;
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setPlayingId(null);
-        }
-      });
+      await playBase64Audio(audioBase64);
+      setPlayingId(null);
     } catch (error) {
-      console.error('Audio playback error:', error);
+      console.error('Audio error:', error);
       setPlayingId(null);
     }
   };
 
+  // ── Image Picker ──
   const pickImage = async (useCamera = false) => {
     try {
-      let result;
       const options: ImagePicker.ImagePickerOptions = {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.5,
-        base64: true,
+        allowsEditing: true, quality: 0.5, base64: true,
       };
+      let result;
       if (useCamera) {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') { alert('Camera permission needed!'); return; }
@@ -118,28 +140,22 @@ export default function Dashboard() {
       if (!result.canceled && result.assets?.[0]?.base64) {
         setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
       }
-    } catch (error) {
-      console.error("Image pick error:", error);
-    }
+    } catch (error) { console.error("Image pick error:", error); }
   };
 
-  const handleSend = async (overrideText?: string) => {
-    const userText = overrideText?.trim() || inputText.trim();
-    if (!userText && !selectedImage) return;
+  // ── Send Message (shared by chat and voice) ──
+  const sendMessage = useCallback(async (text: string, imgB64?: string | null) => {
+    if (!text.trim() && !imgB64) return;
 
-    const b64Img = selectedImage;
-    const newMessage: Message = {
+    const newMsg: Message = {
       id: Date.now().toString(),
-      text: userText,
+      text: text.trim(),
       isSender: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'sent',
-      image_base64: b64Img || undefined,
+      image_base64: imgB64 || undefined,
     };
-
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
-    setSelectedImage(null);
+    setMessages(prev => [...prev, newMsg]);
     setIsTyping(true);
     if (voiceMode) setVoiceState('processing');
 
@@ -149,13 +165,12 @@ export default function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userText,
+          message: text.trim(),
           user_id: 'demo_user_123',
           language: i18n.locale,
-          image_base64: b64Img,
+          image_base64: imgB64,
         }),
       });
-
       const data = await response.json();
       setMessages(prev => prev.map(m => m.isSender ? { ...m, status: 'read' } : m));
 
@@ -172,7 +187,9 @@ export default function Dashboard() {
         // Auto-play in voice mode
         if (voiceMode && data.audio_base64) {
           setVoiceState('speaking');
-          await playAudio(data.audio_base64, reply.id);
+          try {
+            await playBase64Audio(data.audio_base64);
+          } catch (e) { console.error('Voice autoplay error:', e); }
           setVoiceState('idle');
         }
       }
@@ -184,203 +201,451 @@ export default function Dashboard() {
         isSender: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
+      if (voiceMode) setVoiceState('idle');
     } finally {
       setIsTyping(false);
-      if (voiceMode) setVoiceState('idle');
+      if (!voiceMode) return;
+    }
+  }, [voiceMode]);
+
+  // ── Chat Send ──
+  const handleSend = () => {
+    const text = inputText.trim();
+    const img = selectedImage;
+    setInputText('');
+    setSelectedImage(null);
+    sendMessage(text, img);
+  };
+
+  // ── Voice Recording via MediaRecorder + Sarvam STT ──
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+      setVoiceState('listening');
+      setVoiceTranscript('');
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        // Stop all mic tracks
+        stream.getTracks().forEach(t => t.stop());
+        if (audioContextRef.current) {
+          audioContextRef.current.close().catch(() => {});
+          audioContextRef.current = null;
+        }
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // Abort if audio is tiny or user never spoke
+        if (audioBlob.size < 1000 || !hasSpokenRef.current) { 
+          setVoiceState('idle');
+          return;
+        }
+        await sendVoiceToBackend(audioBlob);
+      };
+
+      // --- Silence Detection Setup ---
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.minDecibels = -70; // Sensitivity to silence
+      source.connect(analyser);
+      
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      let silenceStart = Date.now();
+      hasSpokenRef.current = false;
+
+      const checkSilence = () => {
+        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+
+        // If average volume is above threshold, they are speaking
+        if (average > 2) { 
+          silenceStart = Date.now();
+          if (!hasSpokenRef.current) hasSpokenRef.current = true;
+        } else {
+          const now = Date.now();
+          // If spoken and then silent for 1.5s, OR haven't spoken for 5s
+          if (hasSpokenRef.current && (now - silenceStart > 1500)) {
+             stopRecording();
+             return;
+          } else if (!hasSpokenRef.current && (now - silenceStart > 5000)) {
+             stopRecording();
+             return;
+          }
+        }
+        
+        requestAnimationFrame(checkSilence);
+      };
+      
+      recorder.start();
+      checkSilence();
+      
+    } catch (err) {
+      console.error('Mic access error:', err);
+      alert('Microphone access is required for voice chat. Please allow mic access.');
+      setVoiceState('idle');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setVoiceState('processing');
+    }
+  };
+
+  const sendVoiceToBackend = async (audioBlob: Blob) => {
+    setVoiceState('processing');
+    setVoiceTranscript('Processing your voice...');
+
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice.webm');
+      formData.append('language', i18n.locale);
+      formData.append('user_id', 'demo_user_123');
+
+      const response = await fetch(`${apiUrl}/api/voice-chat`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setVoiceTranscript(data.error);
+        setVoiceState('idle');
+        return;
+      }
+
+      // Show what user said
+      // Show what user said
+      const cleanTranscript = (data.transcript || '').replace(/['"]+/g, '').trim();
+      
+      if (cleanTranscript && cleanTranscript.toLowerCase() !== 'not found') {
+        setVoiceTranscript(cleanTranscript);
+        // Add user message to chat history
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: cleanTranscript,
+          isSender: true,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'read',
+        }]);
+      } else {
+        // Fallback if it detected silence despite VAD
+        setVoiceTranscript('');
+      }
+
+      // Add AI reply to chat history
+      if (data.reply) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          text: data.reply,
+          isSender: false,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          audio_base64: data.audio_base64 || undefined,
+        }]);
+      }
+
+      // Auto-play response audio
+      if (data.audio_base64) {
+        setVoiceState('speaking');
+        setVoiceTranscript(data.reply || '');
+        try {
+          await playBase64Audio(data.audio_base64);
+        } catch (e) { console.error('Voice playback error:', e); }
+      }
+
+      // Auto-restart listening after speaking (continuous call feel)
+      setVoiceState('idle');
+      // Small delay before auto-restarting to feel natural
+      setTimeout(() => {
+        if (voiceMode) startRecording();
+      }, 1500);
+
+    } catch (error) {
+      console.error('Voice chat error:', error);
+      setVoiceTranscript('Connection error. Tap the mic to try again.');
+      setVoiceState('idle');
     }
   };
 
   const enterVoiceMode = () => {
     setVoiceMode(true);
+    setIsVoiceMinimized(false);
     setVoiceState('idle');
+    setVoiceTranscript('');
+    // Start listening immediately on click so browser doesn't block the mic prompt
+    startRecording();
   };
 
-  const exitVoiceMode = async () => {
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
-      soundRef.current = null;
+  const exitVoiceMode = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      // Stop without triggering onstop processing
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
     }
     setVoiceMode(false);
+    setIsVoiceMinimized(false);
     setVoiceState('idle');
-    setPlayingId(null);
+    setVoiceTranscript('');
   };
 
   // ═══════════════════════════════════════════════════════
-  // VOICE MODE FULL-SCREEN OVERLAY
+  // VOICE MODE FULL-SCREEN (WhatsApp Style)
   // ═══════════════════════════════════════════════════════
-  if (voiceMode) {
-    return (
-      <SafeAreaView style={styles.voiceOverlay}>
-        {/* Gradient-like animated background */}
-        <View style={styles.voiceBg}>
-          {/* Top bar */}
-          <Animated.View entering={FadeInDown.duration(400)} style={styles.voiceTopBar}>
-            <Text style={styles.voiceTopLabel}>Voice Chat</Text>
-            <Text style={styles.voiceTimer}>{formatDuration(callDuration)}</Text>
-          </Animated.View>
+  if (voiceMode && !isVoiceMinimized) {
+    const isListening = voiceState === 'listening';
+    const isSpeaking = voiceState === 'speaking';
+    const isProcessing = voiceState === 'processing';
 
-          {/* Avatar & status */}
-          <View style={styles.voiceCenter}>
-            <Animated.View entering={ZoomIn.duration(500)} style={styles.voiceAvatarRing}>
-              <View style={[
-                styles.voiceAvatarOuter,
-                voiceState === 'speaking' && styles.voiceAvatarSpeaking,
-                voiceState === 'listening' && styles.voiceAvatarListening,
-              ]}>
-                <Image
-                  source={require('../../assets/images/logo.png')}
-                  style={styles.voiceAvatarImg}
-                  contentFit="contain"
-                />
+    return (
+      <View style={vs.overlay}>
+        <ImageBackground source={require('../../assets/images/bg.png')} style={vs.bg} imageStyle={vs.bgImage}>
+          {/* Top Bar */}
+          <View style={vs.topBar}>
+            <Pressable onPress={() => setIsVoiceMinimized(true)} style={vs.iconBtn}>
+              <ChevronDown color="#fff" size={28} />
+            </Pressable>
+            <View style={vs.topCenter}>
+              <Text style={vs.nameSmall}>Aranya</Text>
+              <View style={vs.encryption}>
+                <Lock color="#8696a0" size={12} />
+                <Text style={vs.encryptionText}>End-to-end encrypted</Text>
               </View>
-            </Animated.View>
-            <Animated.Text entering={FadeIn.delay(300)} style={styles.voiceName}>Aranya</Animated.Text>
-            <Animated.Text entering={FadeIn.delay(400)} style={styles.voiceStatus}>
-              {voiceState === 'idle' && '🟢 Connected'}
-              {voiceState === 'listening' && '🎤 Listening...'}
-              {voiceState === 'processing' && '⏳ Thinking...'}
-              {voiceState === 'speaking' && '🔊 Speaking...'}
-            </Animated.Text>
+            </View>
+            <Pressable style={vs.iconBtn}>
+              <UserPlus color="#fff" size={24} />
+            </Pressable>
           </View>
 
-          {/* Quick text input for voice mode */}
-          <View style={styles.voiceInputArea}>
-            <View style={styles.voiceInputBox}>
-              <TextInput
-                style={styles.voiceTextInput}
-                placeholder="Type or speak your question..."
-                placeholderTextColor="rgba(255,255,255,0.5)"
-                value={inputText}
-                onChangeText={setInputText}
-                onSubmitEditing={() => handleSend()}
-              />
-              <Pressable onPress={() => handleSend()} style={styles.voiceSendBtn}>
-                <Send color="#fff" size={18} />
+          {/* Center — Avatar */}
+          <View style={vs.center}>
+            <Animated.View entering={ZoomIn.duration(500)} style={[
+              vs.avatarOuter,
+              isSpeaking && vs.avatarPulseSpeaking,
+              isListening && vs.avatarPulseListening,
+            ]}>
+              <Image source={require('../../assets/images/logo.png')} style={vs.avatarImg} contentFit="contain" />
+            </Animated.View>
+
+            {/* In WhatsApp, time appears here once connected */}
+            <Text style={vs.timer}>{formatDuration(callDuration)}</Text>
+            
+            <Text style={vs.status}>
+              {voiceState === 'idle' && 'Tap mic to resume'}
+              {isListening && 'Listening...'}
+              {isProcessing && 'Thinking...'}
+              {isSpeaking && 'Speaking...'}
+            </Text>
+
+            {voiceTranscript ? (
+              <Animated.View entering={FadeIn} style={vs.transcriptBubble}>
+                <Text style={vs.transcriptText}>"{voiceTranscript}"</Text>
+              </Animated.View>
+            ) : null}
+          </View>
+
+          {/* Bottom Pill Controls */}
+          <Animated.View entering={FadeInUp.delay(200).duration(400)} style={vs.bottomContainer}>
+            <View style={vs.pillContainer}>
+              <Pressable style={vs.pillButton} onPress={exitVoiceMode}>
+                <MessageSquare color="#fff" size={24} />
+              </Pressable>
+              
+              <Pressable style={vs.pillButton} onPress={() => alert('Speaker toggled')}>
+                <Volume2 color="#fff" size={24} />
+              </Pressable>
+              
+              <Pressable 
+                style={[vs.pillButton, isListening ? vs.pillButtonActive : null]}
+                onPress={() => {
+                  if (isListening) stopRecording();
+                  else if (isSpeaking || isProcessing) {
+                    setVoiceState('idle'); // Interrupt
+                  }
+                  else if (voiceState === 'idle') startRecording();
+                }}
+              >
+                {isListening ? <Mic color="#111" size={24} /> : <MicOff color="#fff" size={24} />}
+              </Pressable>
+              
+              <Pressable style={vs.endCallButton} onPress={exitVoiceMode}>
+                <PhoneOff color="#fff" size={24} />
               </Pressable>
             </View>
-          </View>
-
-          {/* Bottom controls */}
-          <Animated.View entering={FadeInUp.delay(200).duration(400)} style={styles.voiceControls}>
-            <Pressable style={styles.voiceControlBtn} onPress={() => {}}>
-              <Volume2 color="#fff" size={24} />
-              <Text style={styles.voiceControlLabel}>Speaker</Text>
-            </Pressable>
-
-            <Pressable style={styles.voiceEndBtn} onPress={exitVoiceMode}>
-              <PhoneOff color="#fff" size={28} />
-            </Pressable>
-
-            <Pressable style={styles.voiceControlBtn} onPress={() => {}}>
-              <Mic color="#fff" size={24} />
-              <Text style={styles.voiceControlLabel}>Mute</Text>
-            </Pressable>
           </Animated.View>
-        </View>
-      </SafeAreaView>
+        </ImageBackground>
+      </View>
     );
   }
+
+  // ── Menu Handlers ──
+  const handleClearChat = () => {
+    setMenuVisible(false);
+    setMessages([{
+      id: '1',
+      text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+      isSender: false,
+      hasCallAction: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }]);
+  };
+
+  const handleReport = () => {
+    setMenuVisible(false);
+    alert('Thank you for reporting. Our team will look into it.');
+  };
+
+  const handleLogout = async () => {
+    setMenuVisible(false);
+    try {
+      await AsyncStorage.removeItem('user_session');
+    } catch (e) {}
+    router.replace('/sign-in');
+  };
 
   // ═══════════════════════════════════════════════════════
   // NORMAL CHAT MODE
   // ═══════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+    <SafeAreaView style={cs.safeArea}>
+      <KeyboardAvoidingView style={cs.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.avatar}>
-              <Image source={require('../../assets/images/logo.png')} style={styles.avatarImage} contentFit="contain" />
+        <View style={cs.header}>
+          <View style={cs.headerLeft}>
+            <View style={cs.avatar}>
+              <Image source={require('../../assets/images/logo.png')} style={cs.avatarImage} contentFit="contain" />
             </View>
             <View>
-              <Text style={styles.headerName}>Aranya</Text>
+              <Text style={cs.headerName}>Aranya</Text>
               {isTyping ? (
-                <Animated.Text entering={FadeIn} style={[styles.headerStatus, { color: '#fb923c' }]}>typing...</Animated.Text>
+                <Animated.Text entering={FadeIn} style={[cs.headerStatus, { color: '#fb923c' }]}>typing...</Animated.Text>
               ) : (
-                <Animated.Text entering={FadeIn} style={styles.headerStatus}>Online</Animated.Text>
+                <Animated.Text entering={FadeIn} style={cs.headerStatus}>Online</Animated.Text>
               )}
             </View>
           </View>
-          <Pressable style={styles.phoneButton} onPress={enterVoiceMode}>
-            <Phone color="#000" size={24} />
-          </Pressable>
+          <View style={cs.headerRight}>
+            <Pressable style={cs.phoneButton} onPress={enterVoiceMode}>
+              <Phone color="#000" size={22} />
+            </Pressable>
+            <Pressable style={cs.menuButton} onPress={() => setMenuVisible(true)}>
+              <MoreVertical color="#000" size={22} />
+            </Pressable>
+          </View>
         </View>
 
+        {/* Minimized Call Bar */}
+        {voiceMode && isVoiceMinimized && (
+          <Pressable style={cs.activeCallBar} onPress={() => setIsVoiceMinimized(false)}>
+            <Text style={cs.activeCallText}>Tap to return to call {formatDuration(callDuration)}</Text>
+          </Pressable>
+        )}
+
+        {/* Dropdown Menu */}
+        <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+          <Pressable style={cs.menuOverlay} onPress={() => setMenuVisible(false)}>
+            <Animated.View entering={FadeIn.duration(150)} style={cs.menuDropdown}>
+              <Pressable style={cs.menuItem} onPress={handleClearChat}>
+                <Trash2 color="#374151" size={18} />
+                <Text style={cs.menuItemText}>Clear Chat</Text>
+              </Pressable>
+              <View style={cs.menuDivider} />
+              <Pressable style={cs.menuItem} onPress={handleReport}>
+                <Flag color="#374151" size={18} />
+                <Text style={cs.menuItemText}>Report Issue</Text>
+              </Pressable>
+              <View style={cs.menuDivider} />
+              <Pressable style={cs.menuItem} onPress={handleLogout}>
+                <LogOut color="#ef4444" size={18} />
+                <Text style={[cs.menuItemText, { color: '#ef4444' }]}>Logout</Text>
+              </Pressable>
+            </Animated.View>
+          </Pressable>
+        </Modal>
+
         {/* Chat Area */}
-        <ImageBackground
-          source={require('../../assets/images/bg.png')}
-          style={styles.chatArea}
-          imageStyle={{ resizeMode: 'repeat', width: '100%', height: '100%' }}
-        >
-          <ScrollView
-            ref={scrollViewRef}
-            contentContainerStyle={styles.chatContent}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-          >
-            <View style={styles.dateBadgeContainer}>
-              <View style={styles.dateBadge}>
-                <Text style={styles.dateText}>Today</Text>
-              </View>
+        <ImageBackground source={require('../../assets/images/bg.png')} style={cs.chatArea}
+          imageStyle={{ resizeMode: 'repeat', width: '100%', height: '100%' }}>
+          <ScrollView ref={scrollViewRef} contentContainerStyle={cs.chatContent}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
+            <View style={cs.dateBadgeContainer}>
+              <View style={cs.dateBadge}><Text style={cs.dateText}>Today</Text></View>
             </View>
 
             {messages.map((msg) => (
-              <Animated.View
-                key={msg.id}
-                entering={FadeInUp.delay(50).duration(300).springify()}
-                style={[styles.messageBubble, msg.isSender ? styles.sentBubble : styles.receivedBubble]}
-              >
+              <Animated.View key={msg.id} entering={FadeInUp.delay(50).duration(300).springify()}
+                style={[cs.messageBubble, msg.isSender ? cs.sentBubble : cs.receivedBubble]}>
+                
                 {msg.image_base64 && (
-                  <Image source={{ uri: msg.image_base64 }} style={styles.messageImage} contentFit="cover" />
+                  <Image source={{ uri: msg.image_base64 }} style={cs.messageImage} contentFit="cover" />
                 )}
-
                 {!!msg.text && (
-                  <Text style={msg.isSender ? styles.sentText : styles.receivedText}>{msg.text}</Text>
+                  <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
                 )}
-
                 {msg.hasCallAction && (
-                  <Pressable style={styles.callActionButton} onPress={enterVoiceMode}>
+                  <Pressable style={cs.callActionButton} onPress={enterVoiceMode}>
                     <Phone color="#10b981" size={16} />
-                    <Text style={styles.callActionText}>Start Voice Chat</Text>
+                    <Text style={cs.callActionText}>Start Voice Chat</Text>
                   </Pressable>
                 )}
-
-                {/* Audio play button for AI messages */}
+                {/* Inline audio player */}
                 {msg.audio_base64 && !msg.isSender && (
-                  <Pressable
-                    style={styles.audioButton}
-                    onPress={() => playAudio(msg.audio_base64!, msg.id)}
-                  >
-                    <Volume2 color={playingId === msg.id ? '#17c690' : '#6b7280'} size={16} />
-                    <Text style={[styles.audioLabel, playingId === msg.id && { color: '#17c690' }]}>
-                      {playingId === msg.id ? 'Playing...' : 'Play Audio'}
+                  <Pressable style={cs.audioButton} onPress={() => playAudio(msg.audio_base64!, msg.id)}>
+                    {playingId === msg.id ? (
+                      <Pause color="#17c690" size={14} />
+                    ) : (
+                      <Play color="#6b7280" size={14} />
+                    )}
+                    <View style={cs.audioWaveform}>
+                      {[4, 8, 12, 8, 14, 6, 10, 12, 6, 8, 14, 10, 6].map((h, i) => (
+                        <View key={i} style={[cs.audioBar, {
+                          height: h,
+                          backgroundColor: playingId === msg.id ? '#17c690' : '#9ca3af',
+                        }]} />
+                      ))}
+                    </View>
+                    <Text style={[cs.audioLabel, playingId === msg.id && { color: '#17c690' }]}>
+                      {playingId === msg.id ? 'Playing' : '0:00'}
                     </Text>
                   </Pressable>
                 )}
-
-                <View style={styles.messageFooter}>
-                  <Text style={msg.isSender ? styles.sentTime : styles.receivedTime}>
-                    {msg.timestamp || ''}
-                  </Text>
-                  {msg.isSender && msg.status === 'sent' && (
-                    <Check color="#ffedd5" size={14} style={styles.tickIcon} />
-                  )}
-                  {msg.isSender && msg.status === 'read' && (
-                    <CheckCheck color="#34B7F1" size={15} style={styles.tickIcon} />
-                  )}
+                <View style={cs.messageFooter}>
+                  <Text style={msg.isSender ? cs.sentTime : cs.receivedTime}>{msg.timestamp || ''}</Text>
+                  {msg.isSender && msg.status === 'sent' && <Check color="#ffedd5" size={14} style={cs.tickIcon} />}
+                  {msg.isSender && msg.status === 'read' && <CheckCheck color="#34B7F1" size={15} style={cs.tickIcon} />}
                 </View>
               </Animated.View>
             ))}
 
             {isTyping && (
-              <Animated.View entering={FadeIn} style={[styles.messageBubble, styles.receivedBubble, { paddingVertical: 16 }]}>
-                <View style={styles.typingDots}>
-                  <View style={[styles.dot, styles.dot1]} />
-                  <View style={[styles.dot, styles.dot2]} />
-                  <View style={[styles.dot, styles.dot3]} />
+              <Animated.View entering={FadeIn} style={[cs.messageBubble, cs.receivedBubble, { paddingVertical: 16 }]}>
+                <View style={cs.typingDots}>
+                  <View style={[cs.dot, { opacity: 0.4 }]} />
+                  <View style={[cs.dot, { opacity: 0.6 }]} />
+                  <View style={[cs.dot, { opacity: 0.9 }]} />
                 </View>
               </Animated.View>
             )}
@@ -389,34 +654,28 @@ export default function Dashboard() {
 
         {/* Image Preview */}
         {selectedImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: selectedImage }} style={styles.imagePreview} contentFit="cover" />
-            <Pressable style={styles.removeImageBtn} onPress={() => setSelectedImage(null)}>
+          <View style={cs.imagePreviewContainer}>
+            <Image source={{ uri: selectedImage }} style={cs.imagePreview} contentFit="cover" />
+            <Pressable style={cs.removeImageBtn} onPress={() => setSelectedImage(null)}>
               <X color="#fff" size={14} />
             </Pressable>
           </View>
         )}
 
         {/* Input */}
-        <View style={styles.inputArea}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Message Aranya..."
-              placeholderTextColor="#6b7280"
-              value={inputText}
-              onChangeText={setInputText}
-              onSubmitEditing={() => handleSend()}
-            />
-            <Pressable style={styles.iconButton} onPress={() => pickImage(false)}>
+        <View style={cs.inputArea}>
+          <View style={cs.inputContainer}>
+            <TextInput style={cs.textInput} placeholder="Message Aranya..." placeholderTextColor="#6b7280"
+              value={inputText} onChangeText={setInputText} onSubmitEditing={handleSend} />
+            <Pressable style={cs.iconButton} onPress={() => pickImage(false)}>
               <Paperclip color="#4b5563" size={20} />
             </Pressable>
-            <Pressable style={styles.iconButton} onPress={() => pickImage(true)}>
+            <Pressable style={cs.iconButton} onPress={() => pickImage(true)}>
               <Camera color="#4b5563" size={20} />
             </Pressable>
           </View>
-          <Pressable style={styles.sendButton} onPress={() => handleSend()}>
-            <Send color="#ffffff" size={20} style={styles.sendIcon} />
+          <Pressable style={cs.sendButton} onPress={handleSend}>
+            <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -424,21 +683,98 @@ export default function Dashboard() {
   );
 }
 
-const styles = StyleSheet.create({
-  // ── Chat Mode ──
+// ═══════════════════════════════════════════════════════
+// VOICE SCREEN STYLES (WhatsApp Call Style)
+// ═══════════════════════════════════════════════════════
+const vs = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: '#0b141a' },
+  bg: { flex: 1 },
+  bgImage: { opacity: 0.05, resizeMode: 'repeat' },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
+  },
+  iconBtn: { padding: 8 },
+  topCenter: { alignItems: 'center' },
+  nameSmall: { fontSize: 18, fontFamily: 'Inter_600SemiBold', color: '#e9edef' },
+  encryption: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  encryptionText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#8696a0' },
+  
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarOuter: {
+    width: 240, height: 240, borderRadius: 120,
+    backgroundColor: '#1f2c34', alignItems: 'center', justifyContent: 'center',
+    marginBottom: 32, overflow: 'hidden',
+  },
+  avatarPulseSpeaking: { borderWidth: 3, borderColor: '#17c690' },
+  avatarPulseListening: { borderWidth: 3, borderColor: '#fb923c' },
+  avatarImg: { width: 160, height: 160 },
+  
+  timer: { fontSize: 18, fontFamily: 'Inter_500Medium', color: '#8696a0', marginBottom: 8 },
+  status: { fontSize: 16, fontFamily: 'Inter_400Regular', color: '#8696a0' },
+  
+  transcriptBubble: {
+    marginTop: 24, paddingHorizontal: 24, maxWidth: '90%',
+  },
+  transcriptText: { fontSize: 15, fontFamily: 'Inter_400Regular', color: '#e9edef', textAlign: 'center', fontStyle: 'italic' },
+  
+  bottomContainer: { 
+    position: 'absolute', bottom: 40, left: 0, right: 0,
+    paddingHorizontal: 20 
+  },
+  pillContainer: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly',
+    backgroundColor: '#1b2024', borderRadius: 40, paddingVertical: 8, paddingHorizontal: 8,
+  },
+  pillButton: {
+    width: 52, height: 52, borderRadius: 26, backgroundColor: '#303b41',
+    alignItems: 'center', justifyContent: 'center', marginHorizontal: 6,
+  },
+  pillButtonActive: { backgroundColor: '#e9edef' },
+  endCallButton: {
+    width: 48, height: 48, borderRadius: 24, backgroundColor: '#ef4444',
+    alignItems: 'center', justifyContent: 'center',
+  },
+});
+
+// ═══════════════════════════════════════════════════════
+// CHAT SCREEN STYLES
+// ═══════════════════════════════════════════════════════
+const cs = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', zIndex: 10,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#ffffff'
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  activeCallBar: {
+    backgroundColor: '#17c690', paddingVertical: 10, alignItems: 'center', justifyContent: 'center'
+  },
+  activeCallText: {
+    color: '#ffffff', fontFamily: 'Inter_600SemiBold', fontSize: 14
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12, backgroundColor: '#e5e7eb', overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   headerName: { fontSize: 16, fontFamily: 'Inter_600SemiBold', color: '#111827' },
   headerStatus: { fontSize: 13, fontFamily: 'Inter_500Medium', color: '#17c690' },
-  phoneButton: { padding: 8, marginRight: -8 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  phoneButton: { padding: 8 },
+  menuButton: { padding: 8 },
+  menuOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-start', alignItems: 'flex-end',
+  },
+  menuDropdown: {
+    marginTop: 60, marginRight: 16, backgroundColor: '#ffffff', borderRadius: 12,
+    paddingVertical: 6, minWidth: 180,
+    shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+  },
+  menuItemText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: '#374151' },
+  menuDivider: { height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 12 },
   chatArea: { flex: 1, backgroundColor: '#e5ddd5' },
   chatContent: { padding: 16, paddingBottom: 24 },
   dateBadgeContainer: { alignItems: 'center', marginVertical: 16 },
@@ -466,17 +802,18 @@ const styles = StyleSheet.create({
     borderRadius: 8, marginTop: 12, borderWidth: 1, borderColor: '#d1fae5',
   },
   callActionText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#10b981', marginLeft: 8 },
+  // Audio player (WhatsApp-style waveform)
   audioButton: {
     flexDirection: 'row', alignItems: 'center', marginTop: 8,
-    backgroundColor: '#f3f4f6', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16,
+    backgroundColor: '#f0fdf4', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20,
+    gap: 8,
   },
-  audioLabel: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#6b7280', marginLeft: 6 },
-  // Typing animation
+  audioWaveform: { flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 },
+  audioBar: { width: 3, borderRadius: 2 },
+  audioLabel: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#6b7280' },
+  // Typing
   typingDots: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#9ca3af' },
-  dot1: { opacity: 0.4 },
-  dot2: { opacity: 0.6 },
-  dot3: { opacity: 0.8 },
   // Image preview
   imagePreviewContainer: {
     padding: 12, paddingHorizontal: 16, backgroundColor: '#ffffff',
@@ -508,68 +845,5 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: 24, backgroundColor: '#17c690',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#17c690', shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 4,
-  },
-  sendIcon: { marginLeft: -2, marginTop: 2 },
-
-  // ── Voice Mode ──
-  voiceOverlay: { flex: 1, backgroundColor: '#0f172a' },
-  voiceBg: { flex: 1, justifyContent: 'space-between' },
-  voiceTopBar: {
-    alignItems: 'center', paddingTop: 24, paddingBottom: 16,
-  },
-  voiceTopLabel: {
-    fontSize: 14, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase', letterSpacing: 2,
-  },
-  voiceTimer: {
-    fontSize: 32, fontFamily: 'Inter_300Light', color: '#ffffff', marginTop: 4,
-  },
-  voiceCenter: { alignItems: 'center', justifyContent: 'center' },
-  voiceAvatarRing: {
-    width: 160, height: 160, borderRadius: 80,
-    borderWidth: 3, borderColor: 'rgba(23,198,144,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  voiceAvatarOuter: {
-    width: 140, height: 140, borderRadius: 70,
-    backgroundColor: '#1e293b', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.1)',
-  },
-  voiceAvatarSpeaking: {
-    borderColor: '#17c690', borderWidth: 4,
-    shadowColor: '#17c690', shadowOpacity: 0.5, shadowRadius: 20,
-  },
-  voiceAvatarListening: {
-    borderColor: '#fb923c', borderWidth: 4,
-    shadowColor: '#fb923c', shadowOpacity: 0.5, shadowRadius: 20,
-  },
-  voiceAvatarImg: { width: 80, height: 80 },
-  voiceName: { fontSize: 24, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 20 },
-  voiceStatus: { fontSize: 15, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.7)', marginTop: 8 },
-  voiceInputArea: { paddingHorizontal: 24, marginBottom: 8 },
-  voiceInputBox: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24,
-    paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-  },
-  voiceTextInput: {
-    flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular', color: '#ffffff',
-    // @ts-ignore
-    outlineStyle: 'none',
-  },
-  voiceSendBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: '#17c690',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  voiceControls: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly',
-    paddingBottom: 48, paddingTop: 16,
-  },
-  voiceControlBtn: { alignItems: 'center', gap: 6 },
-  voiceControlLabel: { fontSize: 12, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.6)' },
-  voiceEndBtn: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: '#ef4444',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#ef4444', shadowOpacity: 0.4, shadowRadius: 12,
   },
 });

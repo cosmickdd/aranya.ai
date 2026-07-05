@@ -295,6 +295,69 @@ def api_chat():
         logger.error(f"/api/chat error: {e}")
         return jsonify({"error": "Failed to generate response"}), 500
 
+
+@app.route("/api/voice-chat", methods=["POST", "OPTIONS"])
+def api_voice_chat():
+    """
+    Voice chat endpoint — accepts audio file from mic recording.
+    Uses Sarvam STT to transcribe, Gemini to respond, Sarvam TTS for audio reply.
+    POST /api/voice-chat  multipart/form-data: audio file + language + user_id
+    Returns: {"transcript": "...", "reply": "...", "audio_base64": "..."}
+    """
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    language = request.form.get("language", "hi")
+    user_id = request.form.get("user_id", "anonymous_voice_user")
+
+    audio_file = request.files.get("audio")
+    if not audio_file:
+        return jsonify({"error": "No audio file provided"}), 400
+
+    try:
+        audio_bytes = audio_file.read()
+        mime_type = audio_file.content_type or "audio/webm"
+        logger.info(f"Voice chat: received {len(audio_bytes)} bytes, mime={mime_type}")
+
+        from services.sarvam import speech_to_text, translate_text, text_to_speech
+        from core.engine import generate_response
+
+        # Step 1: Sarvam STT — transcribe audio to text in user's language
+        transcript = speech_to_text(audio_bytes, language=language, mime_type=mime_type)
+        if not transcript:
+            return jsonify({"error": "Could not understand audio. Please try again."}), 400
+        logger.info(f"STT transcript: {transcript}")
+
+        # Step 2: Translate to English for Gemini
+        gemini_input = transcript
+        if language and language != "en":
+            gemini_input = translate_text(transcript, source_lang=language, target_lang="en")
+
+        # Step 3: Gemini AI response
+        ai_text = generate_response(
+            phone_id=user_id,
+            user_text=gemini_input,
+            voice_mode=True,
+            language="en",
+        )
+
+        # Step 4: Translate back to user's language
+        translated_reply = ai_text
+        if language and language != "en":
+            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language)
+
+        # Step 5: Sarvam TTS
+        audio_b64 = text_to_speech(translated_reply, language=language)
+
+        return jsonify({
+            "transcript": transcript,
+            "reply": translated_reply,
+            "audio_base64": audio_b64,
+        })
+    except Exception as e:
+        logger.error(f"/api/voice-chat error: {e}")
+        return jsonify({"error": "Voice processing failed"}), 500
+
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
