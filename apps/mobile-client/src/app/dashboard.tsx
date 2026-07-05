@@ -549,12 +549,13 @@ export default function Dashboard() {
         } catch (e) { console.error('Voice playback error:', e); }
       }
 
-      // Auto-restart listening after speaking (continuous call feel)
+      // Auto-restart listening immediately after speaking (continuous call feel)
       setVoiceState('idle');
-      // Use voiceModeRef.current (not voiceMode) to avoid stale closure on Android/iOS
       setTimeout(() => {
-        if (voiceModeRef.current) startRecording();
-      }, 1500);
+        if (voiceModeRef.current) {
+          startRecording();
+        }
+      }, 100);
 
     } catch (error) {
       console.error('Voice chat error:', error);
