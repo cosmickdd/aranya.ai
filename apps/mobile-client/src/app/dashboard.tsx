@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare } from 'lucide-react-native';
+import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, Wand2, RotateCw } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
@@ -83,6 +83,18 @@ export default function Dashboard() {
   const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
   const [speakerOn, setSpeakerOn] = useState(false);
   const hasSpokenRef = useRef(false);
+
+  // Custom WhatsApp Camera Modal States
+  const [cameraModalVisible, setCameraModalVisible] = useState(false);
+  const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
+  const [cameraMode, setCameraMode] = useState<'photo' | 'video' | 'videonote'>('photo');
+
+  const mockGallery = [
+    { id: '1', url: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
+    { id: '2', url: 'https://images.unsplash.com/photo-1536630590251-40439a0f675f?w=200&q=80' },
+    { id: '3', url: 'https://images.unsplash.com/photo-1551893086-c02cbf3a9a88?w=200&q=80' },
+    { id: '4', url: 'https://images.unsplash.com/photo-1600697395593-e9dc66797e43?w=200&q=80' },
+  ];
 
   // Ripple Animations
   const ripple1 = useSharedValue(1);
@@ -733,7 +745,7 @@ export default function Dashboard() {
             <Pressable style={cs.iconButton} onPress={() => pickImage(false)}>
               <Paperclip color="#4b5563" size={20} />
             </Pressable>
-            <Pressable style={cs.iconButton} onPress={() => pickImage(true)}>
+            <Pressable style={cs.iconButton} onPress={() => setCameraModalVisible(true)}>
               <Camera color="#4b5563" size={20} />
             </Pressable>
           </View>
@@ -748,6 +760,116 @@ export default function Dashboard() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* WhatsApp Custom Camera Modal */}
+      <Modal visible={cameraModalVisible} animationType="slide" transparent={false} onRequestClose={() => setCameraModalVisible(false)}>
+        <View style={cms.container}>
+          {/* Header */}
+          <View style={cms.header}>
+            <Pressable style={cms.iconBtn} onPress={() => setCameraModalVisible(false)}>
+              <X color="#fff" size={28} />
+            </Pressable>
+            <Pressable style={cms.iconBtn} onPress={() => setFlashMode(flashMode === 'on' ? 'off' : 'on')}>
+              {flashMode === 'on' ? <Zap color="#eab308" size={24} /> : <ZapOff color="#fff" size={24} />}
+            </Pressable>
+          </View>
+
+          {/* Viewfinder */}
+          <View style={cms.viewfinder}>
+            <Image 
+              source={{ uri: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80' }} 
+              style={cms.viewfinderImage}
+              contentFit="cover"
+            />
+            <View style={cms.viewfinderOverlay}>
+              <View style={cms.focusRing} />
+            </View>
+          </View>
+
+          {/* Gallery strip */}
+          <View style={cms.galleryContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cms.galleryScroll}>
+              {mockGallery.map((item) => (
+                <Pressable 
+                  key={item.id} 
+                  style={cms.galleryItem}
+                  onPress={() => {
+                    setSelectedImage(item.url);
+                    setCameraModalVisible(false);
+                  }}
+                >
+                  <Image source={{ uri: item.url }} style={cms.galleryImage} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Shutter controls */}
+          <View style={cms.shutterRow}>
+            {/* Open Gallery */}
+            <Pressable 
+              style={cms.controlBtn} 
+              onPress={async () => {
+                const options: ImagePicker.ImagePickerOptions = {
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true, quality: 0.5, base64: true,
+                };
+                const result = await ImagePicker.launchImageLibraryAsync(options);
+                if (!result.canceled && result.assets?.[0]?.base64) {
+                  setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+                  setCameraModalVisible(false);
+                }
+              }}
+            >
+              <ImageIcon color="#fff" size={26} />
+            </Pressable>
+
+            {/* Filter */}
+            <Pressable style={cms.controlBtn} onPress={() => alert('Filters coming soon!')}>
+              <Wand2 color="#fff" size={26} />
+            </Pressable>
+
+            {/* Shutter */}
+            <Pressable 
+              style={cms.shutterOuter}
+              onPress={async () => {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') { alert('Camera permission needed!'); return; }
+                
+                const options: ImagePicker.ImagePickerOptions = {
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true, quality: 0.5, base64: true,
+                };
+                const result = await ImagePicker.launchCameraAsync(options);
+                if (!result.canceled && result.assets?.[0]?.base64) {
+                  setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+                  setCameraModalVisible(false);
+                }
+              }}
+            >
+              <View style={cms.shutterInner} />
+            </Pressable>
+
+            {/* Flip camera */}
+            <Pressable style={cms.controlBtn} onPress={() => alert('Flipping camera...')}>
+              <RotateCw color="#fff" size={26} />
+            </Pressable>
+          </View>
+
+          {/* Mode Selector */}
+          <View style={cms.modeRow}>
+            <Pressable onPress={() => setCameraMode('video')}>
+              <Text style={[cms.modeText, cameraMode === 'video' && cms.modeTextActive]}>Video</Text>
+            </Pressable>
+            <View style={cms.modePill}>
+              <Text style={[cms.modeText, cameraMode === 'photo' && cms.modeTextActive]}>Photo</Text>
+            </View>
+            <Pressable onPress={() => setCameraMode('videonote')}>
+              <Text style={[cms.modeText, cameraMode === 'videonote' && cms.modeTextActive]}>Video note</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -817,6 +939,56 @@ const vs = StyleSheet.create({
   endCallButton: {
     width: 48, height: 48, borderRadius: 24, backgroundColor: '#ef4444',
     alignItems: 'center', justifyContent: 'center',
+  },
+});
+
+const cms = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#000', justifyContent: 'space-between', paddingBottom: 24 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 40, height: 80,
+  },
+  iconBtn: { padding: 8 },
+  viewfinder: {
+    flex: 1, marginHorizontal: 8, borderRadius: 24, overflow: 'hidden',
+    position: 'relative', backgroundColor: '#111',
+  },
+  viewfinderImage: { width: '100%', height: '100%' },
+  viewfinderOverlay: {
+    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center',
+  },
+  focusRing: {
+    width: 80, height: 80, borderRadius: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
+    borderStyle: 'dashed' as any,
+  },
+  galleryContainer: { height: 80, marginVertical: 12 },
+  galleryScroll: { paddingHorizontal: 16, gap: 10 },
+  galleryItem: { width: 64, height: 64, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#333' },
+  galleryImage: { width: '100%', height: '100%' },
+  shutterRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly',
+    marginVertical: 16,
+  },
+  controlBtn: {
+    width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shutterOuter: {
+    width: 84, height: 84, borderRadius: 42, borderWidth: 6, borderColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shutterInner: {
+    width: 64, height: 64, borderRadius: 32, backgroundColor: '#fff',
+  },
+  modeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24,
+    height: 48,
+  },
+  modeText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: '#888' },
+  modeTextActive: { color: '#fff' },
+  modePill: {
+    backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 16, paddingVertical: 6,
+    borderRadius: 20,
   },
 });
 
