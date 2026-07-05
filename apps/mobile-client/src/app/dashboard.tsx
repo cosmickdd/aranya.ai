@@ -91,7 +91,7 @@ export default function Dashboard() {
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
   const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | 'videonote'>('photo');
-  const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
+  const [cameraType, setCameraType] = useState<'back' | 'front'>(Platform.OS === 'web' ? 'front' : 'back');
   const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; uri: string }[]>([]);
   
   const [permission, requestPermission] = useCameraPermissions();
