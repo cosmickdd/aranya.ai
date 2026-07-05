@@ -10,6 +10,7 @@ import { Audio } from 'expo-av';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
+import { fetchSarvamTTS } from '../lib/sarvam';
 
 // ═══════════════════════════════════════════════════════
 // AUDIO HELPERS — cross-platform (Web Audio API on web, expo-av on native)
@@ -581,7 +582,6 @@ export default function Dashboard() {
       }
 
       // Auto-play response audio
-      // Auto-play response audio
       if (data.audio_base64) {
         setVoiceState('speaking');
         setVoiceTranscript(data.reply || '');
@@ -591,9 +591,19 @@ export default function Dashboard() {
       } else if (data.reply) {
         setVoiceState('speaking');
         setVoiceTranscript(data.reply);
-        try {
-          await playFallbackAudio(data.reply, i18n.locale);
-        } catch (e) { console.error('Fallback playback error:', e); }
+        
+        // Try Sarvam frontend fallback first!
+        const sarvamB64 = await fetchSarvamTTS(data.reply, i18n.locale);
+        if (sarvamB64) {
+          try {
+            await playBase64Audio(sarvamB64);
+          } catch (e) { console.error('Sarvam playback error:', e); }
+        } else {
+          // If Sarvam fails (e.g. no API key), fallback to local device TTS
+          try {
+            await playFallbackAudio(data.reply, i18n.locale);
+          } catch (e) { console.error('Fallback playback error:', e); }
+        }
       }
 
     } catch (error) {
