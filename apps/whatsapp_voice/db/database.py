@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.exc import OperationalError
 
 Base = declarative_base()
 
@@ -45,7 +46,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except OperationalError as exc:
+        msg = str(exc).lower()
+        if "already exists" in msg:
+            return
+        raise
 
 
 def get_session():

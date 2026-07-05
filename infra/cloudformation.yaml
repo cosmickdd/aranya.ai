@@ -1,0 +1,266 @@
+choco install awscli -ypip install awscli"""
+AWS CloudFormation template for Aranya.ai deployment
+Deploys: EC2 instance, RDS (optional), S3 for storage, IAM roles, Security Groups
+"""
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Aranya.ai WhatsApp+Voice Service on AWS'
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+    Description: EC2 instance type (t3.micro = free tier eligible)
+  
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of your EC2 Key Pair for SSH access
+  
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "EC2 Configuration"
+        Parameters:
+          - InstanceType
+          - KeyPairName
+          - Environment
+
+Resources:
+  # VPC Security Group
+  AranyaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Aranya.ai service
+      SecurityGroupIngress:
+        # SSH
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH access
+        # HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP traffic
+        # HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS traffic
+        # Application port (Gunicorn)
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
+          Description: Application server
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+      Tags:
+        - Key: Name
+          Value: !Sub 'aranya-sg-${Environment}'
+
+  # IAM Role for EC2 instance
+  AranyaInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/SSMManagedInstanceCore
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt AudioCacheBucket.Arn
+                  - !Sub '${AudioCacheBucket.Arn}/*'
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:aranya/*'
+
+  AranyaInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref AranyaInstanceRole
+
+  # S3 Bucket for audio cache
+  AudioCacheBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'aranya-audio-${AWS::AccountId}-${Environment}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldAudio
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 7
+      Tags:
+        - Key: Name
+          Value: !Sub 'aranya-audio-${Environment}'
+
+  # EC2 Instance
+  AranyaInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0c55b159cbfafe1f0  # Ubuntu 20.04 LTS (us-east-1) - update for your region
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: !Ref AranyaInstanceProfile
+      SecurityGroupIds:
+        - !Ref AranyaSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+          
+          # Update system
+          apt-get update
+          apt-get upgrade -y
+          
+          # Install dependencies
+          apt-get install -y \
+            python3.11 \
+            python3.11-venv \
+            python3-pip \
+            git \
+            curl \
+            ffmpeg \
+            nginx \
+            supervisor \
+            awscli
+          
+          # Create app directory
+          mkdir -p /opt/aranya
+          cd /opt/aranya
+          
+          # Clone repository (replace with your repo)
+          # git clone https://github.com/your-org/aranya.ai.git .
+          
+          # For now, create placeholder
+          echo "Aranya app directory" > /opt/aranya/README.txt
+          
+          # Create Python virtual environment
+          python3.11 -m venv venv
+          source venv/bin/activate
+          
+          # Install requirements (once repo is cloned)
+          # pip install -r whatsapp_voice/requirements.txt
+          
+          # Configure Nginx as reverse proxy
+          cat > /etc/nginx/sites-available/aranya << 'EOF'
+          server {
+              listen 80;
+              server_name _;
+              
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_read_timeout 60s;
+              }
+              
+              location /health {
+                  proxy_pass http://127.0.0.1:8000/health;
+              }
+          }
+          EOF
+          
+          ln -sf /etc/nginx/sites-available/aranya /etc/nginx/sites-enabled/
+          rm -f /etc/nginx/sites-enabled/default
+          nginx -t && systemctl restart nginx
+          
+          # Configure Supervisor for Gunicorn
+          cat > /etc/supervisor/conf.d/aranya.conf << 'EOF'
+          [program:aranya]
+          directory=/opt/aranya/whatsapp_voice
+          command=/opt/aranya/venv/bin/gunicorn -b 127.0.0.1:8000 -w 4 --timeout 60 wsgi_production:app
+          autostart=true
+          autorestart=true
+          stderr_logfile=/var/log/aranya/gunicorn-error.log
+          stdout_logfile=/var/log/aranya/gunicorn-access.log
+          environment=PATH="/opt/aranya/venv/bin"
+          EOF
+          
+          mkdir -p /var/log/aranya
+          systemctl restart supervisor
+          
+          # CloudWatch Logs Agent
+          wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+          dpkg -i -E ./amazon-cloudwatch-agent.deb
+          
+          echo "Setup complete!"
+      Tags:
+        - Key: Name
+          Value: !Sub 'aranya-instance-${Environment}'
+
+Outputs:
+  InstancePublicIP:
+    Description: Public IP of EC2 instance
+    Value: !GetAtt AranyaInstance.PublicIp
+    Export:
+      Name: !Sub '${AWS::StackName}-InstancePublicIP'
+  
+  InstanceDNS:
+    Description: Public DNS name of EC2 instance
+    Value: !GetAtt AranyaInstance.PublicDnsName
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceDNS'
+  
+  AudioBucketName:
+    Description: S3 bucket for audio cache
+    Value: !Ref AudioCacheBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AudioBucket'
+  
+  SecurityGroupId:
+    Description: Security group ID
+    Value: !Ref AranyaSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroup'

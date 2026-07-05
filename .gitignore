@@ -57,6 +57,7 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 aranya_mvp.db
+data/
 
 # Cache & Temporary
 audio_cache/

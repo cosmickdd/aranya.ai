@@ -2,6 +2,7 @@
 
 # Build stage
 FROM python:3.11-slim as builder
+ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /tmp/build
 
@@ -26,12 +27,14 @@ RUN pip install --upgrade pip setuptools wheel && \
 
 # Runtime stage
 FROM python:3.11-slim
+ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
@@ -39,7 +42,6 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 COPY whatsapp_voice/ /app/whatsapp_voice/
-COPY docs/ /app/docs/
 
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH" \
@@ -57,4 +59,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # Run Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "wsgi:app"]
+CMD ["gunicorn", "--preload", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "wsgi:app"]

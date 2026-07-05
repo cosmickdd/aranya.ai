@@ -1,0 +1,38 @@
+services:
+  # WhatsApp & Voice API (Flask)
+  - type: web
+    name: aranya-whatsapp-voice
+    env: python
+    buildCommand: "cd apps/whatsapp_voice && pip install -r requirements.txt"
+    startCommand: "cd apps/whatsapp_voice && waitress-serve --host=0.0.0.0 --port=$PORT server:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: USE_PRODUCTION_SERVER
+        value: "true"
+      # These must be filled in the Render Dashboard
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_NUMBER
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+
+  # Telegram MVP Bot
+  - type: worker
+    name: aranya-telegram-bot
+    env: python
+    buildCommand: "cd apps/mvp && pip install -r requirements.txt"
+    startCommand: "cd apps/mvp && python main.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      # These must be filled in the Render Dashboard
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
