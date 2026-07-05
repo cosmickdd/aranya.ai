@@ -297,7 +297,7 @@ export default function Dashboard() {
       } catch (e) {
         console.error('Failed to take picture, falling back to system camera:', e);
         const options: ImagePicker.ImagePickerOptions = {
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: ['images'],
           allowsEditing: true, quality: 0.5, base64: true,
         };
         const result = await ImagePicker.launchCameraAsync(options);
@@ -558,13 +558,55 @@ export default function Dashboard() {
     }
   };
 
-  const enterVoiceMode = () => {
-    setVoiceMode(true);
-    setIsVoiceMinimized(false);
-    setVoiceState('idle');
-    setVoiceTranscript('');
-    // Start listening immediately on click so browser doesn't block the mic prompt
-    startRecording();
+  const greetAndStart = async () => {
+    setVoiceState('processing');
+    setVoiceTranscript('Connecting...');
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
+      const response = await fetch(`${apiUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Please give a very short 1-sentence friendly greeting to start our voice call.',
+          user_id: 'demo_user_123',
+          language: i18n.locale,
+        }),
+      });
+      const data = await response.json();
+      
+      if (data.reply) {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: data.reply,
+          isSender: false,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }]);
+
+        if (data.audio_base64) {
+          setVoiceState('speaking');
+          setVoiceTranscript(data.reply);
+          await playBase64Audio(data.audio_base64);
+        }
+      }
+    } catch (e) {
+      console.error('Greeting error', e);
+    } finally {
+      setVoiceState('idle');
+      setTimeout(() => {
+        if (voiceModeRef.current) startRecording();
+      }, 100);
+    }
+  };
+
+  const toggleVoiceMode = () => {
+    const newState = !voiceMode;
+    setVoiceMode(newState);
+    if (newState) {
+      greetAndStart();
+    } else {
+      stopRecording();
+      setVoiceState('idle');
+    }
   };
 
   const exitVoiceMode = async () => {
