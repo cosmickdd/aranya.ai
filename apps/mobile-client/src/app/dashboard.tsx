@@ -7,6 +7,7 @@ import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnim
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { CameraView, Camera, useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 
@@ -90,24 +91,45 @@ export default function Dashboard() {
   const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | 'videonote'>('photo');
   const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
+  const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; uri: string }[]>([]);
   
   const [permission, requestPermission] = useCameraPermissions();
   const hasCameraPermission = permission ? permission.granted : false;
   
   const cameraRef = useRef<any>(null);
 
+  const loadGalleryPhotos = async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status === 'granted') {
+        const { assets } = await MediaLibrary.getAssetsAsync({
+          first: 10,
+          sortBy: [MediaLibrary.SortBy.creationTime],
+          mediaType: [MediaLibrary.MediaType.photo],
+        });
+        setGalleryPhotos(assets.map(a => ({ id: a.id, uri: a.uri })));
+      } else {
+        throw new Error('Permission denied');
+      }
+    } catch (e) {
+      console.log('Using fallback mock gallery (expected on web):', e);
+      setGalleryPhotos([
+        { id: '1', uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
+        { id: '2', uri: 'https://images.unsplash.com/photo-1536630590251-40439a0f675f?w=200&q=80' },
+        { id: '3', uri: 'https://images.unsplash.com/photo-1551893086-c02cbf3a9a88?w=200&q=80' },
+        { id: '4', uri: 'https://images.unsplash.com/photo-1600697395593-e9dc66797e43?w=200&q=80' },
+      ]);
+    }
+  };
+
   useEffect(() => {
-    if (cameraModalVisible && (!permission || !permission.granted)) {
-      requestPermission();
+    if (cameraModalVisible) {
+      if (!permission || !permission.granted) {
+        requestPermission();
+      }
+      loadGalleryPhotos();
     }
   }, [cameraModalVisible, permission]);
-
-  const mockGallery = [
-    { id: '1', url: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1536630590251-40439a0f675f?w=200&q=80' },
-    { id: '3', url: 'https://images.unsplash.com/photo-1551893086-c02cbf3a9a88?w=200&q=80' },
-    { id: '4', url: 'https://images.unsplash.com/photo-1600697395593-e9dc66797e43?w=200&q=80' },
-  ];
 
   // Ripple Animations
   const ripple1 = useSharedValue(1);
@@ -834,16 +856,16 @@ export default function Dashboard() {
           {/* Gallery strip */}
           <View style={cms.galleryContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cms.galleryScroll}>
-              {mockGallery.map((item) => (
+              {galleryPhotos.map((item) => (
                 <Pressable 
                   key={item.id} 
                   style={cms.galleryItem}
                   onPress={() => {
-                    setSelectedImage(item.url);
+                    setSelectedImage(item.uri);
                     setCameraModalVisible(false);
                   }}
                 >
-                  <Image source={{ uri: item.url }} style={cms.galleryImage} />
+                  <Image source={{ uri: item.uri }} style={cms.galleryImage} />
                 </Pressable>
               ))}
             </ScrollView>
