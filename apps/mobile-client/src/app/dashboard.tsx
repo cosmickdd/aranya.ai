@@ -78,6 +78,51 @@ async function playBase64Audio(base64: string): Promise<void> {
   });
 }
 
+async function playFallbackAudio(text: string, langCode: string): Promise<void> {
+  if (Platform.OS !== 'web') {
+    let sound: Audio.Sound | null = null;
+    try {
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      const lang = langCode === 'hi' ? 'hi' : 'en';
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`;
+      const { sound: s } = await Audio.Sound.createAsync(
+        { uri: ttsUrl },
+        { shouldPlay: true }
+      );
+      sound = s;
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 60000);
+        s.setOnPlaybackStatusUpdate((status: any) => {
+          if (status.isLoaded && status.didJustFinish) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+    } catch (e) {
+      console.error('Native fallback playback error:', e);
+    } finally {
+      if (sound) { try { await sound.unloadAsync(); } catch (_) {} }
+    }
+    return;
+  }
+  
+  // Web Fallback
+  return new Promise((resolve) => {
+    try {
+      const lang = langCode === 'hi' ? 'hi' : 'en';
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.error('Web fallback error', e);
+      resolve();
+    }
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════
@@ -536,12 +581,19 @@ export default function Dashboard() {
       }
 
       // Auto-play response audio
+      // Auto-play response audio
       if (data.audio_base64) {
         setVoiceState('speaking');
         setVoiceTranscript(data.reply || '');
         try {
           await playBase64Audio(data.audio_base64);
         } catch (e) { console.error('Voice playback error:', e); }
+      } else if (data.reply) {
+        setVoiceState('speaking');
+        setVoiceTranscript(data.reply);
+        try {
+          await playFallbackAudio(data.reply, i18n.locale);
+        } catch (e) { console.error('Fallback playback error:', e); }
       }
 
     } catch (error) {
@@ -586,6 +638,10 @@ export default function Dashboard() {
           setVoiceState('speaking');
           setVoiceTranscript(data.reply);
           await playBase64Audio(data.audio_base64);
+        } else if (data.reply) {
+          setVoiceState('speaking');
+          setVoiceTranscript(data.reply);
+          await playFallbackAudio(data.reply, i18n.locale);
         }
       }
     } catch (e) {
