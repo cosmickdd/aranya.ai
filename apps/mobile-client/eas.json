@@ -8,10 +8,8 @@
       "distribution": "internal"
     },
     "preview": {
+      "node": "20.x",
       "distribution": "internal",
-      "env": {
-        "NODE_OPTIONS": "--max-old-space-size=4096"
-      },
       "android": {
         "buildType": "apk"
       }
