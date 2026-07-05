@@ -194,13 +194,16 @@ def index():
     })
 
 
-@app.route("/test-call", methods=["POST"])
+@app.route("/test-call", methods=["POST", "OPTIONS"])
 def test_call():
     """
     Trigger an outbound alert call.
     POST /test-call  JSON: {"to": "+919876543210", "message": "Alert text"}
     Requires TEST_CALL_SECRET header for security.
     """
+    if request.method == "OPTIONS":
+        return ("", 204)
+        
     # Basic auth for test endpoint
     secret = request.headers.get("X-Test-Secret", "")
     expected = os.getenv("TEST_CALL_SECRET", "")
@@ -221,6 +224,38 @@ def test_call():
         return jsonify({"success": True, "call_sid": sid})
     return jsonify({"success": False, "error": "Call failed — check logs"}), 500
 
+
+@app.route("/api/chat", methods=["POST", "OPTIONS"])
+def api_chat():
+    """
+    REST endpoint for the mobile app chat interface.
+    POST /api/chat  JSON: {"message": "Hello", "user_id": "app_user_123"}
+    """
+    if request.method == "OPTIONS":
+        return ("", 204)
+        
+    data = request.get_json() or {}
+    msg = data.get("message", "")
+    user_id = data.get("user_id", "anonymous_mobile_user")
+    
+    if not msg:
+        return jsonify({"error": "Missing message"}), 400
+        
+    try:
+        from core.engine import generate_response
+        # We pass voice_mode=False for the chat UI
+        ai_text = generate_response(phone_id=user_id, user_text=msg, voice_mode=False)
+        return jsonify({"reply": ai_text})
+    except Exception as e:
+        logger.error(f"/api/chat error: {e}")
+        return jsonify({"error": "Failed to generate response"}), 500
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Test-Secret'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+    return response
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Error Handlers

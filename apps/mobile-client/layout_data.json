@@ -1,0 +1,1841 @@
+[
+  {
+    "name": "Onboarding 1",
+    "type": "FRAME",
+    "details": {
+      "bbox": {
+        "w": 375.0,
+        "h": 812.0
+      },
+      "fill": "#cce59d"
+    },
+    "children": [
+      {
+        "name": "Button",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 327.0,
+            "h": 56.0
+          },
+          "fill": "#fc865a",
+          "radius": 40.0
+        },
+        "children": [
+          {
+            "name": "Next",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 37.0,
+                "h": 24.0
+              },
+              "font": "16.0px 600 Inter",
+              "fill": "#ffffff"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Content",
+        "type": "GROUP",
+        "details": {
+          "bbox": {
+            "w": 327.0,
+            "h": 156.0
+          }
+        },
+        "children": [
+          {
+            "name": "Slider Indicator",
+            "type": "FRAME",
+            "details": {
+              "bbox": {
+                "w": 43.999996185302734,
+                "h": 9.999999046325684
+              }
+            },
+            "children": [
+              {
+                "name": "Ellipse 11",
+                "type": "ELLIPSE",
+                "details": {
+                  "bbox": {
+                    "w": 8.0,
+                    "h": 8.0
+                  },
+                  "fill": "#8fac5a"
+                },
+                "children": []
+              },
+              {
+                "name": "Ellipse 12",
+                "type": "ELLIPSE",
+                "details": {
+                  "bbox": {
+                    "w": 8.0,
+                    "h": 8.0
+                  },
+                  "fill": "#8fac5a"
+                },
+                "children": []
+              },
+              {
+                "name": "Group 147",
+                "type": "GROUP",
+                "details": {
+                  "bbox": {
+                    "w": 11.999999046325684,
+                    "h": 11.999999046325684
+                  }
+                },
+                "children": [
+                  {
+                    "name": "Ellipse 14",
+                    "type": "ELLIPSE",
+                    "details": {
+                      "bbox": {
+                        "w": 11.999999046325684,
+                        "h": 11.999999046325684
+                      },
+                      "fill": "#fc865a"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Ellipse 13",
+                    "type": "ELLIPSE",
+                    "details": {
+                      "bbox": {
+                        "w": 5.999999523162842,
+                        "h": 5.999999523162842
+                      },
+                      "fill": "#ffffff"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Make the earth a map to real life. Life can be better if it is in the right hands and free from air and factory pollution.",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 327.0,
+                "h": 72.0
+              },
+              "font": "16.0px 400 Inter",
+              "fill": "#4c6221"
+            },
+            "children": []
+          },
+          {
+            "name": "Protect Our Earth",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 209.0,
+                "h": 34.0
+              },
+              "font": "24.0px 600 Inter",
+              "fill": "#114c3a"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Illustrasi 1",
+        "type": "GROUP",
+        "details": {
+          "bbox": {
+            "w": 571.0,
+            "h": 586.0
+          }
+        },
+        "children": [
+          {
+            "name": "BG",
+            "type": "RECTANGLE",
+            "details": {
+              "bbox": {
+                "w": 375.0,
+                "h": 440.0
+              },
+              "fill": "#ffffff"
+            },
+            "children": []
+          },
+          {
+            "name": "Ellipse 171",
+            "type": "ELLIPSE",
+            "details": {
+              "bbox": {
+                "w": 571.0,
+                "h": 571.0
+              }
+            },
+            "children": []
+          },
+          {
+            "name": "Air pollution free 1",
+            "type": "RECTANGLE",
+            "details": {
+              "bbox": {
+                "w": 375.0,
+                "h": 402.0
+              }
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Top bar",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 375.0,
+            "h": 52.0
+          }
+        },
+        "children": [
+          {
+            "name": "Logo",
+            "type": "GROUP",
+            "details": {
+              "bbox": {
+                "w": 97.12890625,
+                "h": 34.21281433105469
+              }
+            },
+            "children": [
+              {
+                "name": "Aranya",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 70.0,
+                    "h": 28.0
+                  },
+                  "font": "20.0px 700 Inter",
+                  "fill": "#17c690"
+                },
+                "children": []
+              },
+              {
+                "name": "Leaf",
+                "type": "VECTOR",
+                "details": {
+                  "bbox": {
+                    "w": 27.258329740549016,
+                    "h": 34.2128127686492
+                  },
+                  "fill": "#17c690"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Status bar",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 375.0,
+            "h": 44.0
+          }
+        },
+        "children": [
+          {
+            "name": "Group",
+            "type": "GROUP",
+            "details": {
+              "bbox": {
+                "w": 66.66134643554688,
+                "h": 11.3359956741333
+              }
+            },
+            "children": [
+              {
+                "name": "Battery",
+                "type": "GROUP",
+                "details": {
+                  "bbox": {
+                    "w": 24.32803726196289,
+                    "h": 11.333333015441895
+                  },
+                  "fill": "#ffffff"
+                },
+                "children": [
+                  {
+                    "name": "Border",
+                    "type": "RECTANGLE",
+                    "details": {
+                      "bbox": {
+                        "w": 22.0,
+                        "h": 11.333333015441895
+                      },
+                      "radius": 2.6666667461395264
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cap",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 1.328037977218628,
+                        "h": 4.0
+                      },
+                      "fill": "#02130e"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Capacity",
+                    "type": "RECTANGLE",
+                    "details": {
+                      "bbox": {
+                        "w": 18.0,
+                        "h": 7.333333492279053
+                      },
+                      "fill": "#02130e",
+                      "radius": 1.3333333730697632
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "Wifi",
+                "type": "BOOLEAN_OPERATION",
+                "details": {
+                  "bbox": {
+                    "w": 15.33329963684082,
+                    "h": 11.0
+                  },
+                  "fill": "#02130e"
+                },
+                "children": [
+                  {
+                    "name": "Wifi-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 15.33329963684082,
+                        "h": 4.758129596710205
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Wifi-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 9.988699913024902,
+                        "h": 3.645390510559082
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Wifi-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 4.644748687744141,
+                        "h": 3.3850016593933105
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "Cellular Connection",
+                "type": "BOOLEAN_OPERATION",
+                "details": {
+                  "bbox": {
+                    "w": 17.0,
+                    "h": 10.666666984558105
+                  },
+                  "fill": "#02130e"
+                },
+                "children": [
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 4.0
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 6.0
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 8.333333015441895
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 10.666666984558105
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Time",
+            "type": "FRAME",
+            "details": {
+              "bbox": {
+                "w": 54.0,
+                "h": 21.0
+              }
+            },
+            "children": [
+              {
+                "name": "Time",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 54.0,
+                    "h": 16.0
+                  },
+                  "font": "14.0px 600 SF Pro Display",
+                  "fill": "#02130e"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Sign In",
+    "type": "FRAME",
+    "details": {
+      "bbox": {
+        "w": 375.0,
+        "h": 812.0
+      },
+      "fill": "#ffffff"
+    },
+    "children": [
+      {
+        "name": "Mask Group",
+        "type": "GROUP",
+        "details": {
+          "bbox": {
+            "w": 375.0,
+            "h": 237.0
+          }
+        },
+        "children": [
+          {
+            "name": "Rectangle 881",
+            "type": "RECTANGLE",
+            "details": {
+              "bbox": {
+                "w": 375.0,
+                "h": 237.0
+              },
+              "fill": "#ffffff"
+            },
+            "children": []
+          },
+          {
+            "name": "Ellipse 171",
+            "type": "ELLIPSE",
+            "details": {
+              "bbox": {
+                "w": 509.0,
+                "h": 509.0
+              }
+            },
+            "children": []
+          },
+          {
+            "name": "Illustrasi",
+            "type": "RECTANGLE",
+            "details": {
+              "bbox": {
+                "w": 297.0,
+                "h": 303.0
+              }
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "New farmer member? Sign Up",
+        "type": "TEXT",
+        "details": {
+          "bbox": {
+            "w": 200.0,
+            "h": 21.0
+          },
+          "font": "14.0px 400 Inter",
+          "fill": "#17c690"
+        },
+        "children": []
+      },
+      {
+        "name": "Button",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 327.0,
+            "h": 56.0
+          },
+          "fill": "#fc865a",
+          "radius": 40.0
+        },
+        "children": [
+          {
+            "name": "Sign In",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 53.0,
+                "h": 24.0
+              },
+              "font": "16.0px 600 Inter",
+              "fill": "#ffffff"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Form Input",
+        "type": "GROUP",
+        "details": {
+          "bbox": {
+            "w": 327.0,
+            "h": 216.0
+          }
+        },
+        "children": [
+          {
+            "name": "Group 951",
+            "type": "GROUP",
+            "details": {
+              "bbox": {
+                "w": 327.0,
+                "h": 86.0
+              }
+            },
+            "children": [
+              {
+                "name": "Rectangle 867",
+                "type": "RECTANGLE",
+                "details": {
+                  "bbox": {
+                    "w": 327.0,
+                    "h": 56.0
+                  },
+                  "radius": 40.0
+                },
+                "children": []
+              },
+              {
+                "name": "message / 24 / Outline",
+                "type": "FRAME",
+                "details": {
+                  "bbox": {
+                    "w": 24.0,
+                    "h": 24.0
+                  },
+                  "fill": "#ffffff"
+                },
+                "children": [
+                  {
+                    "name": "Vector",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 20.0,
+                        "h": 16.0
+                      },
+                      "fill": "#a8adb3"
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "mail@ecology",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 93.0,
+                    "h": 21.0
+                  },
+                  "font": "14.0px 400 Inter",
+                  "fill": "#a8adb3"
+                },
+                "children": []
+              },
+              {
+                "name": "Email*",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 45.0,
+                    "h": 21.0
+                  },
+                  "font": "14.0px 600 Inter",
+                  "fill": "#363b41"
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "name": "Group 1020",
+            "type": "GROUP",
+            "details": {
+              "bbox": {
+                "w": 327.0,
+                "h": 114.0
+              }
+            },
+            "children": [
+              {
+                "name": "Resend OTP",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 83.0,
+                    "h": 21.0
+                  },
+                  "font": "14.0px 600 Inter",
+                  "fill": "#17c690"
+                },
+                "children": []
+              },
+              {
+                "name": "Group 952",
+                "type": "GROUP",
+                "details": {
+                  "bbox": {
+                    "w": 327.0,
+                    "h": 85.0
+                  }
+                },
+                "children": [
+                  {
+                    "name": "Rectangle 867",
+                    "type": "RECTANGLE",
+                    "details": {
+                      "bbox": {
+                        "w": 327.0,
+                        "h": 56.0
+                      },
+                      "radius": 40.0
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "No Preview",
+                    "type": "FRAME",
+                    "details": {
+                      "bbox": {
+                        "w": 24.0,
+                        "h": 24.0
+                      },
+                      "fill": "#ffffff"
+                    },
+                    "children": [
+                      {
+                        "name": "Vector",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 20.009889602661133,
+                            "h": 20.009889602661133
+                          },
+                          "fill": "#a8adb3"
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "************",
+                    "type": "TEXT",
+                    "details": {
+                      "bbox": {
+                        "w": 84.0,
+                        "h": 21.0
+                      },
+                      "font": "14.0px 400 Inter",
+                      "fill": "#a8adb3"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "OTP*",
+                    "type": "TEXT",
+                    "details": {
+                      "bbox": {
+                        "w": 37.0,
+                        "h": 21.0
+                      },
+                      "font": "14.0px 600 Inter",
+                      "fill": "#363b41"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Divider Sign In",
+        "type": "GROUP",
+        "details": {
+          "bbox": {
+            "w": 327.0,
+            "h": 21.0
+          }
+        },
+        "children": [
+          {
+            "name": "Or Sign In with email",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 136.0,
+                "h": 21.0
+              },
+              "font": "14.0px 400 Inter",
+              "fill": "#a8adb3"
+            },
+            "children": []
+          },
+          {
+            "name": "Line 3",
+            "type": "LINE",
+            "details": {
+              "bbox": {
+                "w": 88.0,
+                "h": 7.693204338465875e-06
+              }
+            },
+            "children": []
+          },
+          {
+            "name": "Line 4",
+            "type": "LINE",
+            "details": {
+              "bbox": {
+                "w": 87.0,
+                "h": 7.605781547681545e-06
+              }
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Title",
+        "type": "GROUP",
+        "details": {
+          "bbox": {
+            "w": 315.0,
+            "h": 62.0
+          }
+        },
+        "children": [
+          {
+            "name": "Welcome Back,",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 178.0,
+                "h": 34.0
+              },
+              "font": "24.0px 600 Inter",
+              "fill": "#114c3a"
+            },
+            "children": []
+          },
+          {
+            "name": "Discover a better way for Modern Farmer.",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 315.0,
+                "h": 24.0
+              },
+              "font": "16.0px 400 Inter",
+              "fill": "#363b41"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Button Sign In-Google",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 327.0,
+            "h": 56.0
+          },
+          "radius": 32.0
+        },
+        "children": [
+          {
+            "name": "Google__G__Logo 1",
+            "type": "RECTANGLE",
+            "details": {
+              "bbox": {
+                "w": 24.0,
+                "h": 24.0
+              }
+            },
+            "children": []
+          },
+          {
+            "name": "Sign In with Google",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 147.0,
+                "h": 24.0
+              },
+              "font": "16.0px 400 Inter",
+              "fill": "#363b41"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Status bar",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 375.0,
+            "h": 44.0
+          }
+        },
+        "children": [
+          {
+            "name": "Group",
+            "type": "GROUP",
+            "details": {
+              "bbox": {
+                "w": 66.66134643554688,
+                "h": 11.3359956741333
+              }
+            },
+            "children": [
+              {
+                "name": "Battery",
+                "type": "GROUP",
+                "details": {
+                  "bbox": {
+                    "w": 24.32803726196289,
+                    "h": 11.333333015441895
+                  },
+                  "fill": "#ffffff"
+                },
+                "children": [
+                  {
+                    "name": "Border",
+                    "type": "RECTANGLE",
+                    "details": {
+                      "bbox": {
+                        "w": 22.0,
+                        "h": 11.333333015441895
+                      },
+                      "radius": 2.6666667461395264
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cap",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 1.328037977218628,
+                        "h": 4.0
+                      },
+                      "fill": "#02130e"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Capacity",
+                    "type": "RECTANGLE",
+                    "details": {
+                      "bbox": {
+                        "w": 18.0,
+                        "h": 7.333333492279053
+                      },
+                      "fill": "#02130e",
+                      "radius": 1.3333333730697632
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "Wifi",
+                "type": "BOOLEAN_OPERATION",
+                "details": {
+                  "bbox": {
+                    "w": 15.33329963684082,
+                    "h": 11.0
+                  },
+                  "fill": "#02130e"
+                },
+                "children": [
+                  {
+                    "name": "Wifi-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 15.33329963684082,
+                        "h": 4.758129596710205
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Wifi-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 9.988699913024902,
+                        "h": 3.645390510559082
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Wifi-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 4.644748687744141,
+                        "h": 3.3850016593933105
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "Cellular Connection",
+                "type": "BOOLEAN_OPERATION",
+                "details": {
+                  "bbox": {
+                    "w": 17.0,
+                    "h": 10.666666984558105
+                  },
+                  "fill": "#02130e"
+                },
+                "children": [
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 4.0
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 6.0
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 8.333333015441895
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Cellular-Connection-path",
+                    "type": "VECTOR",
+                    "details": {
+                      "bbox": {
+                        "w": 3.0,
+                        "h": 10.666666984558105
+                      },
+                      "fill": "#000000"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Time",
+            "type": "FRAME",
+            "details": {
+              "bbox": {
+                "w": 54.0,
+                "h": 21.0
+              }
+            },
+            "children": [
+              {
+                "name": "Time",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 54.0,
+                    "h": 16.0
+                  },
+                  "font": "14.0px 600 SF Pro Display",
+                  "fill": "#02130e"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Sign Up",
+    "type": "FRAME",
+    "details": {
+      "bbox": {
+        "w": 375.0,
+        "h": 841.0
+      },
+      "fill": "#ffffff"
+    },
+    "children": [
+      {
+        "name": "Frame 3",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 375.0,
+            "h": 669.0
+          }
+        },
+        "children": [
+          {
+            "name": "Status bar",
+            "type": "FRAME",
+            "details": {
+              "bbox": {
+                "w": 375.0,
+                "h": 44.0
+              }
+            },
+            "children": [
+              {
+                "name": "Group",
+                "type": "GROUP",
+                "details": {
+                  "bbox": {
+                    "w": 66.66134643554688,
+                    "h": 11.3359956741333
+                  }
+                },
+                "children": [
+                  {
+                    "name": "Battery",
+                    "type": "GROUP",
+                    "details": {
+                      "bbox": {
+                        "w": 24.32803726196289,
+                        "h": 11.333333015441895
+                      },
+                      "fill": "#ffffff"
+                    },
+                    "children": [
+                      {
+                        "name": "Border",
+                        "type": "RECTANGLE",
+                        "details": {
+                          "bbox": {
+                            "w": 22.0,
+                            "h": 11.333333015441895
+                          },
+                          "radius": 2.6666667461395264
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Cap",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 1.328037977218628,
+                            "h": 4.0
+                          },
+                          "fill": "#02130e"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Capacity",
+                        "type": "RECTANGLE",
+                        "details": {
+                          "bbox": {
+                            "w": 18.0,
+                            "h": 7.333333492279053
+                          },
+                          "fill": "#02130e",
+                          "radius": 1.3333333730697632
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Wifi",
+                    "type": "BOOLEAN_OPERATION",
+                    "details": {
+                      "bbox": {
+                        "w": 15.33329963684082,
+                        "h": 11.0
+                      },
+                      "fill": "#02130e"
+                    },
+                    "children": [
+                      {
+                        "name": "Wifi-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 15.33329963684082,
+                            "h": 4.758129596710205
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Wifi-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 9.988699913024902,
+                            "h": 3.645390510559082
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Wifi-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 4.644748687744141,
+                            "h": 3.3850016593933105
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Cellular Connection",
+                    "type": "BOOLEAN_OPERATION",
+                    "details": {
+                      "bbox": {
+                        "w": 17.0,
+                        "h": 10.666666984558105
+                      },
+                      "fill": "#02130e"
+                    },
+                    "children": [
+                      {
+                        "name": "Cellular-Connection-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 3.0,
+                            "h": 4.0
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Cellular-Connection-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 3.0,
+                            "h": 6.0
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Cellular-Connection-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 3.0,
+                            "h": 8.333333015441895
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Cellular-Connection-path",
+                        "type": "VECTOR",
+                        "details": {
+                          "bbox": {
+                            "w": 3.0,
+                            "h": 10.666666984558105
+                          },
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "Time",
+                "type": "FRAME",
+                "details": {
+                  "bbox": {
+                    "w": 54.0,
+                    "h": 21.0
+                  }
+                },
+                "children": [
+                  {
+                    "name": "Time",
+                    "type": "TEXT",
+                    "details": {
+                      "bbox": {
+                        "w": 54.0,
+                        "h": 16.0
+                      },
+                      "font": "14.0px 600 SF Pro Display",
+                      "fill": "#02130e"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Frame 2",
+            "type": "FRAME",
+            "details": {
+              "bbox": {
+                "w": 375.0,
+                "h": 593.0
+              }
+            },
+            "children": [
+              {
+                "name": "Title",
+                "type": "GROUP",
+                "details": {
+                  "bbox": {
+                    "w": 327.0,
+                    "h": 86.0
+                  }
+                },
+                "children": [
+                  {
+                    "name": "Create New Account",
+                    "type": "TEXT",
+                    "details": {
+                      "bbox": {
+                        "w": 240.0,
+                        "h": 34.0
+                      },
+                      "font": "24.0px 600 Inter",
+                      "fill": "#114c3a"
+                    },
+                    "children": []
+                  },
+                  {
+                    "name": "Enjoy excellent features as a Modern Farmer.",
+                    "type": "TEXT",
+                    "details": {
+                      "bbox": {
+                        "w": 327.0,
+                        "h": 48.0
+                      },
+                      "font": "16.0px 400 Inter",
+                      "fill": "#50555c"
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "Frame",
+                "type": "FRAME",
+                "details": {
+                  "bbox": {
+                    "w": 327.0,
+                    "h": 483.0
+                  }
+                },
+                "children": [
+                  {
+                    "name": "Button Sign Up-Google",
+                    "type": "FRAME",
+                    "details": {
+                      "bbox": {
+                        "w": 327.0,
+                        "h": 56.0
+                      },
+                      "radius": 32.0
+                    },
+                    "children": [
+                      {
+                        "name": "Google__G__Logo 1",
+                        "type": "RECTANGLE",
+                        "details": {
+                          "bbox": {
+                            "w": 24.0,
+                            "h": 24.0
+                          }
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Sign Up with Google",
+                        "type": "TEXT",
+                        "details": {
+                          "bbox": {
+                            "w": 155.0,
+                            "h": 24.0
+                          },
+                          "font": "16.0px 400 Inter",
+                          "fill": "#363b41"
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Divider Sign Up",
+                    "type": "GROUP",
+                    "details": {
+                      "bbox": {
+                        "w": 327.0,
+                        "h": 21.0
+                      }
+                    },
+                    "children": [
+                      {
+                        "name": "Or Sign Up with email",
+                        "type": "TEXT",
+                        "details": {
+                          "bbox": {
+                            "w": 143.0,
+                            "h": 21.0
+                          },
+                          "font": "14.0px 400 Inter",
+                          "fill": "#a8adb3"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Line 3",
+                        "type": "LINE",
+                        "details": {
+                          "bbox": {
+                            "w": 85.0,
+                            "h": 0.0
+                          }
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "Line 4",
+                        "type": "LINE",
+                        "details": {
+                          "bbox": {
+                            "w": 83.0,
+                            "h": 7.256091066665249e-06
+                          }
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Form Input",
+                    "type": "GROUP",
+                    "details": {
+                      "bbox": {
+                        "w": 327.0,
+                        "h": 316.0
+                      }
+                    },
+                    "children": [
+                      {
+                        "name": "Group 951",
+                        "type": "GROUP",
+                        "details": {
+                          "bbox": {
+                            "w": 327.0,
+                            "h": 85.0
+                          }
+                        },
+                        "children": [
+                          {
+                            "name": "Group 1022",
+                            "type": "GROUP",
+                            "details": {
+                              "bbox": {
+                                "w": 327.0,
+                                "h": 56.0
+                              }
+                            },
+                            "children": [
+                              {
+                                "name": "Rectangle 867",
+                                "type": "RECTANGLE",
+                                "details": {
+                                  "bbox": {
+                                    "w": 327.0,
+                                    "h": 56.0
+                                  },
+                                  "radius": 40.0
+                                },
+                                "children": []
+                              },
+                              {
+                                "name": "message / 24 / Outline",
+                                "type": "FRAME",
+                                "details": {
+                                  "bbox": {
+                                    "w": 24.0,
+                                    "h": 24.0
+                                  },
+                                  "fill": "#ffffff"
+                                },
+                                "children": [
+                                  {
+                                    "name": "Vector",
+                                    "type": "VECTOR",
+                                    "details": {
+                                      "bbox": {
+                                        "w": 20.0,
+                                        "h": 16.0
+                                      },
+                                      "fill": "#50555c"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "Endy@ecology",
+                                "type": "TEXT",
+                                "details": {
+                                  "bbox": {
+                                    "w": 99.0,
+                                    "h": 21.0
+                                  },
+                                  "font": "14.0px 400 Inter",
+                                  "fill": "#50555c"
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "name": "Email*",
+                            "type": "TEXT",
+                            "details": {
+                              "bbox": {
+                                "w": 45.0,
+                                "h": 21.0
+                              },
+                              "font": "14.0px 600 Inter",
+                              "fill": "#363b41"
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Group 955",
+                        "type": "GROUP",
+                        "details": {
+                          "bbox": {
+                            "w": 327.0,
+                            "h": 85.0
+                          }
+                        },
+                        "children": [
+                          {
+                            "name": "Group 1021",
+                            "type": "GROUP",
+                            "details": {
+                              "bbox": {
+                                "w": 327.0,
+                                "h": 56.0
+                              }
+                            },
+                            "children": [
+                              {
+                                "name": "Rectangle 867",
+                                "type": "RECTANGLE",
+                                "details": {
+                                  "bbox": {
+                                    "w": 327.0,
+                                    "h": 56.0
+                                  },
+                                  "radius": 40.0
+                                },
+                                "children": []
+                              },
+                              {
+                                "name": "account / 24 / Outline",
+                                "type": "FRAME",
+                                "details": {
+                                  "bbox": {
+                                    "w": 24.0,
+                                    "h": 24.0
+                                  },
+                                  "fill": "#ffffff"
+                                },
+                                "children": [
+                                  {
+                                    "name": "Vector",
+                                    "type": "VECTOR",
+                                    "details": {
+                                      "bbox": {
+                                        "w": 19.9017276763916,
+                                        "h": 20.011531829833984
+                                      },
+                                      "fill": "#363b41"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "Endy Mandale",
+                                "type": "TEXT",
+                                "details": {
+                                  "bbox": {
+                                    "w": 94.0,
+                                    "h": 21.0
+                                  },
+                                  "font": "14.0px 400 Inter",
+                                  "fill": "#363b41"
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "name": "Full Name*",
+                            "type": "TEXT",
+                            "details": {
+                              "bbox": {
+                                "w": 74.0,
+                                "h": 21.0
+                              },
+                              "font": "14.0px 600 Inter",
+                              "fill": "#363b41"
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Group 1020",
+                        "type": "GROUP",
+                        "details": {
+                          "bbox": {
+                            "w": 327.0,
+                            "h": 114.0
+                          }
+                        },
+                        "children": [
+                          {
+                            "name": "Resend OTP",
+                            "type": "TEXT",
+                            "details": {
+                              "bbox": {
+                                "w": 83.0,
+                                "h": 21.0
+                              },
+                              "font": "14.0px 600 Inter",
+                              "fill": "#17c690"
+                            },
+                            "children": []
+                          },
+                          {
+                            "name": "Group 952",
+                            "type": "GROUP",
+                            "details": {
+                              "bbox": {
+                                "w": 327.0,
+                                "h": 85.0
+                              }
+                            },
+                            "children": [
+                              {
+                                "name": "Rectangle 867",
+                                "type": "RECTANGLE",
+                                "details": {
+                                  "bbox": {
+                                    "w": 327.0,
+                                    "h": 56.0
+                                  },
+                                  "radius": 40.0
+                                },
+                                "children": []
+                              },
+                              {
+                                "name": "No Preview",
+                                "type": "FRAME",
+                                "details": {
+                                  "bbox": {
+                                    "w": 24.0,
+                                    "h": 24.0
+                                  },
+                                  "fill": "#ffffff"
+                                },
+                                "children": [
+                                  {
+                                    "name": "Vector",
+                                    "type": "VECTOR",
+                                    "details": {
+                                      "bbox": {
+                                        "w": 20.009889602661133,
+                                        "h": 20.009889602661133
+                                      },
+                                      "fill": "#a8adb3"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "************",
+                                "type": "TEXT",
+                                "details": {
+                                  "bbox": {
+                                    "w": 84.0,
+                                    "h": 21.0
+                                  },
+                                  "font": "14.0px 400 Inter",
+                                  "fill": "#a8adb3"
+                                },
+                                "children": []
+                              },
+                              {
+                                "name": "OTP*",
+                                "type": "TEXT",
+                                "details": {
+                                  "bbox": {
+                                    "w": 37.0,
+                                    "h": 21.0
+                                  },
+                                  "font": "14.0px 600 Inter",
+                                  "fill": "#363b41"
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Content",
+                    "type": "GROUP",
+                    "details": {
+                      "bbox": {
+                        "w": 327.0,
+                        "h": 42.0
+                      }
+                    },
+                    "children": [
+                      {
+                        "name": "By signing up, you\u2019re agree to our Terms & Conditions and Privacy Policy",
+                        "type": "TEXT",
+                        "details": {
+                          "bbox": {
+                            "w": 303.0,
+                            "h": 42.0
+                          },
+                          "font": "14.0px 400 Inter",
+                          "fill": "#000000"
+                        },
+                        "children": []
+                      },
+                      {
+                        "name": "check-square",
+                        "type": "FRAME",
+                        "details": {
+                          "bbox": {
+                            "w": 16.0,
+                            "h": 16.0
+                          },
+                          "fill": "#ffffff"
+                        },
+                        "children": [
+                          {
+                            "name": "Vector",
+                            "type": "VECTOR",
+                            "details": {
+                              "bbox": {
+                                "w": 13.333333969116211,
+                                "h": 13.333333969116211
+                              },
+                              "fill": "#17c690"
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Frame 4",
+        "type": "FRAME",
+        "details": {
+          "bbox": {
+            "w": 375.0,
+            "h": 93.0
+          }
+        },
+        "children": [
+          {
+            "name": "Button",
+            "type": "FRAME",
+            "details": {
+              "bbox": {
+                "w": 327.0,
+                "h": 56.0
+              },
+              "fill": "#fc865a",
+              "radius": 40.0
+            },
+            "children": [
+              {
+                "name": "Sign Up",
+                "type": "TEXT",
+                "details": {
+                  "bbox": {
+                    "w": 61.0,
+                    "h": 24.0
+                  },
+                  "font": "16.0px 600 Inter",
+                  "fill": "#ffffff"
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "name": "Already have a farmer member? Sign Up",
+            "type": "TEXT",
+            "details": {
+              "bbox": {
+                "w": 327.0,
+                "h": 21.0
+              },
+              "font": "14.0px 400 Inter",
+              "fill": "#17c690"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+]
