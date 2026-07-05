@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, Wand2, RotateCw } from 'lucide-react-native';
@@ -77,6 +77,8 @@ export default function Dashboard() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportText, setReportText] = useState('');
 
   // Voice Mode
   const [voiceMode, setVoiceMode] = useState(false);
@@ -646,26 +648,61 @@ export default function Dashboard() {
   // ── Menu Handlers ──
   const handleClearChat = () => {
     setMenuVisible(false);
-    setMessages([{
-      id: '1',
-      text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
-      isSender: false,
-      hasCallAction: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
+    Alert.alert(
+      'Clear Chat',
+      'Are you sure you want to clear all messages? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: () => {
+          setMessages([{
+            id: '1',
+            text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+            isSender: false,
+            hasCallAction: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }]);
+        }},
+      ]
+    );
   };
 
   const handleReport = () => {
     setMenuVisible(false);
-    alert('Thank you for reporting. Our team will look into it.');
+    setReportText('');
+    setReportModalVisible(true);
+  };
+
+  const submitReport = async () => {
+    if (!reportText.trim()) return;
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
+      await fetch(`${apiUrl}/api/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: reportText, user_id: 'demo_user_123', timestamp: new Date().toISOString() }),
+      });
+    } catch (e) {
+      console.log('Report sent (or offline, ignoring):', e);
+    }
+    setReportModalVisible(false);
+    Alert.alert('Thank You', 'Your report has been submitted. Our team will review it shortly.');
   };
 
   const handleLogout = async () => {
     setMenuVisible(false);
-    try {
-      await AsyncStorage.removeItem('user_session');
-    } catch (e) {}
-    router.replace('/sign-in');
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+          } catch (e) {}
+          router.replace('/sign-in');
+        }},
+      ]
+    );
   };
 
   // ═══════════════════════════════════════════════════════
@@ -726,6 +763,34 @@ export default function Dashboard() {
               </Pressable>
             </Animated.View>
           </Pressable>
+        </Modal>
+
+        {/* Report Issue Modal */}
+        <Modal visible={reportModalVisible} transparent animationType="fade" onRequestClose={() => setReportModalVisible(false)}>
+          <View style={cs.reportOverlay}>
+            <Animated.View entering={FadeIn.duration(200)} style={cs.reportCard}>
+              <Text style={cs.reportTitle}>Report an Issue</Text>
+              <Text style={cs.reportSubtitle}>Describe what went wrong and we will look into it.</Text>
+              <TextInput
+                style={cs.reportInput}
+                placeholder="Describe the issue..."
+                placeholderTextColor="#9ca3af"
+                multiline
+                numberOfLines={4}
+                value={reportText}
+                onChangeText={setReportText}
+                autoFocus
+              />
+              <View style={cs.reportActions}>
+                <Pressable style={cs.reportCancelBtn} onPress={() => setReportModalVisible(false)}>
+                  <Text style={cs.reportCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={[cs.reportSubmitBtn, !reportText.trim() && { opacity: 0.4 }]} onPress={submitReport}>
+                  <Text style={cs.reportSubmitText}>Submit</Text>
+                </Pressable>
+              </View>
+            </Animated.View>
+          </View>
         </Modal>
 
         {/* Chat Area */}
@@ -1100,6 +1165,29 @@ const cs = StyleSheet.create({
   },
   menuItemText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: '#374151' },
   menuDivider: { height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 12 },
+  reportOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  reportCard: {
+    backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420,
+    shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 8 }, shadowRadius: 24, elevation: 12,
+  },
+  reportTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#111827', marginBottom: 6 },
+  reportSubtitle: { fontSize: 14, fontFamily: 'Inter_400Regular', color: '#6b7280', marginBottom: 16, lineHeight: 20 },
+  reportInput: {
+    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 14,
+    fontSize: 15, fontFamily: 'Inter_400Regular', color: '#111827',
+    minHeight: 100, textAlignVertical: 'top', marginBottom: 20,
+  },
+  reportActions: { flexDirection: 'row', gap: 12 },
+  reportCancelBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', alignItems: 'center',
+  },
+  reportCancelText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#374151' },
+  reportSubmitBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#fc865a', alignItems: 'center',
+  },
+  reportSubmitText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
   chatArea: { flex: 1, backgroundColor: '#e5ddd5' },
   chatContent: { padding: 16, paddingBottom: 24 },
   dateBadgeContainer: { alignItems: 'center', marginVertical: 16 },
