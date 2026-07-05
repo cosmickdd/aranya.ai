@@ -471,7 +471,6 @@ export default function Dashboard() {
     return (
       <View style={vs.overlay}>
         <ImageBackground source={require('../../assets/images/bg.png')} style={vs.bg} imageStyle={vs.bgImage}>
-          {/* Top Bar */}
           <View style={vs.topBar}>
             <Pressable onPress={() => setIsVoiceMinimized(true)} style={vs.iconBtn}>
               <ChevronDown color="#fff" size={28} />
@@ -483,7 +482,7 @@ export default function Dashboard() {
                 <Text style={vs.encryptionText}>End-to-end encrypted</Text>
               </View>
             </View>
-            <View style={{ width: 44 }} /> {/* Placeholder to keep header title perfectly centered */}
+            <View style={{ width: 44 }} />
           </View>
 
           {/* Center — Avatar */}
