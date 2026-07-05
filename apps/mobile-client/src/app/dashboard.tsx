@@ -432,10 +432,6 @@ export default function Dashboard() {
           if (hasSpokenRef.current && (now - silenceStartRef.current > 1500)) {
             stopRecording();
           } 
-          // 5 seconds of total silence without ever speaking = stop
-          else if (!hasSpokenRef.current && (now - silenceStartRef.current > 5000)) {
-            stopRecording();
-          }
         }
       });
       
@@ -507,11 +503,9 @@ export default function Dashboard() {
 
       if (data.error) {
         setVoiceTranscript(data.error);
-        setVoiceState('idle');
         return;
       }
 
-      // Show what user said
       // Show what user said
       const cleanTranscript = (data.transcript || '').replace(/['"]+/g, '').trim();
       
@@ -550,18 +544,17 @@ export default function Dashboard() {
         } catch (e) { console.error('Voice playback error:', e); }
       }
 
-      // Auto-restart listening immediately after speaking (continuous call feel)
+    } catch (error) {
+      console.error('Voice chat error:', error);
+      setVoiceTranscript('Connection error. Trying again...');
+    } finally {
+      // Always auto-restart listening to keep the call alive
       setVoiceState('idle');
       setTimeout(() => {
         if (voiceModeRef.current) {
           startRecording();
         }
       }, 100);
-
-    } catch (error) {
-      console.error('Voice chat error:', error);
-      setVoiceTranscript('Connection error. Tap the mic to try again.');
-      setVoiceState('idle');
     }
   };
 
