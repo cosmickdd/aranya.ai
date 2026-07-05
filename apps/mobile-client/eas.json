@@ -10,6 +10,17 @@
     "preview": {
       "node": "20.14.0",
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAvlYHyX4VmAjkS6U9npybQCTjwK6sr55Y",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "aranya-d4d64.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "aranya-d4d64",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "aranya-d4d64.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "969259104757",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:969259104757:web:c92d6c2f35c5ca8bcc48bc",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-S4FR18L5CF",
+        "EXPO_PUBLIC_API_URL": "https://aranya-ai-6r0j.onrender.com",
+        "EXPO_PUBLIC_SARVAM_API_KEY": "sk_089qh2jr_fze1zOPQyUWly4AwIf5fhY73"
+      },
       "android": {
         "buildType": "apk"
       }
