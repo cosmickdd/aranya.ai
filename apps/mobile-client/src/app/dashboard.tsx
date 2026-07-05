@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, Wand2, RotateCw } from 'lucide-react-native';
+import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, Wand2, RotateCw } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
@@ -785,7 +785,7 @@ export default function Dashboard() {
               <Paperclip color="#4b5563" size={20} />
             </Pressable>
             <Pressable style={cs.iconButton} onPress={() => setCameraModalVisible(true)}>
-              <Camera color="#4b5563" size={20} />
+              <CameraIcon color="#4b5563" size={20} />
             </Pressable>
           </View>
           {inputText.trim().length > 0 || selectedImage ? (
