@@ -93,6 +93,7 @@ export default function Dashboard() {
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | 'videonote'>('photo');
   const [cameraType, setCameraType] = useState<'back' | 'front'>(Platform.OS === 'web' ? 'front' : 'back');
   const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; uri: string }[]>([]);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   
   const [permission, requestPermission] = useCameraPermissions();
   const hasCameraPermission = permission ? permission.granted : false;
@@ -129,6 +130,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (cameraModalVisible) {
+      setCameraError(null);
       if (!permission || !permission.granted) {
         requestPermission();
       }
@@ -841,16 +843,24 @@ export default function Dashboard() {
 
           {/* Viewfinder */}
           <View style={cms.viewfinder}>
-            {hasCameraPermission ? (
+            {hasCameraPermission && !cameraError ? (
               <CameraView 
                 style={cms.viewfinderImage} 
                 facing={cameraType} 
                 flash={flashMode}
                 ref={cameraRef}
+                onMountError={(err) => {
+                  console.log('Camera mount error:', err);
+                  setCameraError(err.message || 'Error starting camera source');
+                }}
               />
             ) : (
               <View style={cms.noPermissionContainer}>
-                <Text style={cms.noPermissionText}>Requesting camera permission...</Text>
+                {cameraError ? (
+                  <Text style={cms.noPermissionText}>Camera source busy or unavailable</Text>
+                ) : (
+                  <Text style={cms.noPermissionText}>Requesting camera permission...</Text>
+                )}
               </View>
             )}
             <View style={cms.viewfinderOverlay}>
