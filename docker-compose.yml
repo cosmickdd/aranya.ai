@@ -17,7 +17,7 @@ services:
       - DATA_GOV_API_KEY=${DATA_GOV_API_KEY:-}
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
     volumes:
-      - ./whatsapp_voice:/app/whatsapp_voice
+      - ./apps/whatsapp_voice:/app/whatsapp_voice
       - aranya-audio:/app/whatsapp_voice/audio_cache
       - aranya-db:/app/whatsapp_voice
     healthcheck:

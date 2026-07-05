@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements from both projects
 COPY requirements.txt ./
-COPY whatsapp_voice/requirements.txt ./whatsapp_voice_requirements.txt
+COPY apps/whatsapp_voice/requirements.txt ./whatsapp_voice_requirements.txt
 
 # Create virtual environment
 RUN python -m venv /opt/venv
@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
-COPY whatsapp_voice/ /app/whatsapp_voice/
+COPY apps/whatsapp_voice/ /app/whatsapp_voice/
 
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH" \
