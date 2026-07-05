@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput,
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Phone, Paperclip, Camera, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, UserPlus, MoreHorizontal, Video, MicOff, MessageSquare } from 'lucide-react-native';
-import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -81,7 +81,53 @@ export default function Dashboard() {
   const [callDuration, setCallDuration] = useState(0);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
+  const [speakerOn, setSpeakerOn] = useState(false);
   const hasSpokenRef = useRef(false);
+
+  // Ripple Animations
+  const ripple1 = useSharedValue(1);
+  const ripple2 = useSharedValue(1);
+
+  useEffect(() => {
+    if (voiceState === 'listening' || voiceState === 'speaking') {
+      ripple1.value = 1;
+      ripple2.value = 1;
+      ripple1.value = withRepeat(
+        withTiming(1.6, { duration: 2000 }),
+        -1,
+        false
+      );
+      ripple2.value = withDelay(
+        1000,
+        withRepeat(
+          withTiming(1.6, { duration: 2000 }),
+          -1,
+          false
+        )
+      );
+    } else {
+      ripple1.value = 1;
+      ripple2.value = 1;
+    }
+  }, [voiceState]);
+
+  const rippleColor = voiceState === 'speaking' ? 'rgba(23, 198, 144, 0.2)' : 'rgba(251, 146, 60, 0.2)';
+
+  const rippleStyle1 = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: ripple1.value }],
+      opacity: 1 - (ripple1.value - 1) / 0.6,
+      backgroundColor: rippleColor,
+    };
+  });
+
+  const rippleStyle2 = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: ripple2.value }],
+      opacity: 1 - (ripple2.value - 1) / 0.6,
+      backgroundColor: rippleColor,
+    };
+  });
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -444,13 +490,21 @@ export default function Dashboard() {
 
           {/* Center — Avatar */}
           <View style={vs.center}>
-            <Animated.View entering={ZoomIn.duration(500)} style={[
-              vs.avatarOuter,
-              isSpeaking && vs.avatarPulseSpeaking,
-              isListening && vs.avatarPulseListening,
-            ]}>
-              <Image source={require('../../assets/images/logo.png')} style={vs.avatarImg} contentFit="contain" />
-            </Animated.View>
+            <View style={vs.avatarWrapper}>
+              {(isListening || isSpeaking) && (
+                <>
+                  <Animated.View style={[vs.ripple, rippleStyle1]} />
+                  <Animated.View style={[vs.ripple, rippleStyle2]} />
+                </>
+              )}
+              <Animated.View entering={ZoomIn.duration(500)} style={[
+                vs.avatarOuter,
+                isSpeaking && vs.avatarPulseSpeaking,
+                isListening && vs.avatarPulseListening,
+              ]}>
+                <Image source={require('../../assets/images/logo.png')} style={vs.avatarImg} contentFit="contain" />
+              </Animated.View>
+            </View>
 
             {/* In WhatsApp, time appears here once connected */}
             <Text style={vs.timer}>{formatDuration(callDuration)}</Text>
@@ -476,8 +530,18 @@ export default function Dashboard() {
                 <MessageSquare color="#fff" size={24} />
               </Pressable>
               
-              <Pressable style={vs.pillButton} onPress={() => alert('Speaker toggled')}>
-                <Volume2 color="#fff" size={24} />
+              <Pressable 
+                style={[vs.pillButton, speakerOn ? vs.pillButtonActive : null]} 
+                onPress={() => {
+                  setSpeakerOn(!speakerOn);
+                  Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                    playThroughEarpieceAndroid: speakerOn, // toggles between speaker/earpiece
+                  }).catch(() => {});
+                }}
+              >
+                <Volume2 color={speakerOn ? "#111" : "#fff"} size={24} />
               </Pressable>
               
               <Pressable 
@@ -709,10 +773,19 @@ const vs = StyleSheet.create({
   encryptionText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#8696a0' },
   
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarWrapper: {
+    width: 320, height: 320, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16, position: 'relative',
+  },
+  ripple: {
+    position: 'absolute',
+    width: 240, height: 240, borderRadius: 120,
+    zIndex: -1,
+  },
   avatarOuter: {
     width: 240, height: 240, borderRadius: 120,
     backgroundColor: '#1f2c34', alignItems: 'center', justifyContent: 'center',
-    marginBottom: 32, overflow: 'hidden',
+    overflow: 'hidden',
   },
   avatarPulseSpeaking: { borderWidth: 3, borderColor: '#17c690' },
   avatarPulseListening: { borderWidth: 3, borderColor: '#fb923c' },
