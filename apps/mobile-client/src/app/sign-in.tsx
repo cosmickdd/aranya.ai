@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import Animated, { FadeInUp, FadeIn, useAnimatedStyle, useSharedValue, withSpring, withTiming, interpolateColor } from 'react-native-reanimated';
 import { Phone, EyeOff, Eye } from 'lucide-react-native';
 import i18n from '../lib/i18n';
-import { auth, googleProvider, RecaptchaVerifier, signInWithPopup, signInWithPhoneNumber } from '../lib/firebase';
+import { getFirebaseAuth, googleProvider, RecaptchaVerifier, signInWithPopup, signInWithPhoneNumber } from '../lib/firebase';
 
 const PremiumInput = ({ label, placeholder, secureTextEntry, icon: IconComponent, delay, value, onChangeText, errorMessage, editable = true, keyboardType = 'default' }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -103,7 +103,7 @@ export default function SignIn() {
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      window.recaptchaVerifier = new RecaptchaVerifier(getFirebaseAuth(), 'recaptcha-container', {
         size: 'invisible',
         callback: (response) => {
           // reCAPTCHA solved
@@ -115,6 +115,7 @@ export default function SignIn() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
+      const auth = getFirebaseAuth();
       await signInWithPopup(auth, googleProvider);
       router.push('/dashboard');
     } catch (error: any) {
@@ -139,6 +140,7 @@ export default function SignIn() {
           setupRecaptcha();
           const appVerifier = window.recaptchaVerifier;
           const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
+          const auth = getFirebaseAuth();
           const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
           setConfirmationResult(result);
           setStep(2);
