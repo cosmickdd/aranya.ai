@@ -306,6 +306,18 @@ export default function SignIn() {
                 </Animated.View>
               )}
 
+              {/* GUEST LOGIN FOR NATIVE TESTING */}
+              <Animated.View entering={FadeInUp.delay(480).duration(600).springify()}>
+                <Pressable 
+                  style={[styles.primaryButton, { backgroundColor: '#17c690', marginTop: 0 }]}
+                  onPress={() => router.push('/dashboard')}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    Continue as Guest
+                  </Text>
+                </Pressable>
+              </Animated.View>
+
               <Animated.View entering={FadeInUp.delay(500).duration(600).springify()}>
                 <Pressable style={styles.footerLink} onPress={() => router.push('/sign-up')} disabled={isLoading}>
                   <Text style={styles.footerText}>New farmer member? <Text style={styles.footerTextBold}>Sign Up</Text></Text>

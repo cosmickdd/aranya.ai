@@ -328,25 +328,37 @@ export default function SignUp() {
               )}
 
               {step === 2 && (
-              <Animated.View entering={FadeInUp.delay(450).duration(600).springify()}>
+                <Animated.View entering={FadeInUp.delay(500).duration(600).springify()}>
+                  <Pressable 
+                    onPressIn={() => (buttonScale.value = withSpring(0.95))}
+                    onPressOut={() => (buttonScale.value = withSpring(1))}
+                    onPress={handlePrimaryAction}
+                    disabled={isLoading}
+                  >
+                    <Animated.View style={[styles.primaryButton, animatedButton, isLoading && styles.primaryButtonDisabled]}>
+                      {isLoading ? (
+                        <ActivityIndicator color="#ffffff" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>
+                          Verify & Sign Up
+                        </Text>
+                      )}
+                    </Animated.View>
+                  </Pressable>
+                </Animated.View>
+              )}
+
+              {/* GUEST LOGIN FOR NATIVE TESTING */}
+              <Animated.View entering={FadeInUp.delay(530).duration(600).springify()}>
                 <Pressable 
-                  onPressIn={() => (buttonScale.value = withSpring(0.95))}
-                  onPressOut={() => (buttonScale.value = withSpring(1))}
-                  onPress={handlePrimaryAction}
-                  disabled={isLoading}
+                  style={[styles.primaryButton, { backgroundColor: '#17c690', marginTop: 0 }]}
+                  onPress={() => router.push('/dashboard')}
                 >
-                  <Animated.View style={[styles.primaryButton, animatedButton, isLoading && styles.primaryButtonDisabled]}>
-                    {isLoading ? (
-                      <ActivityIndicator color="#ffffff" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>
-                        Verify & Sign Up
-                      </Text>
-                    )}
-                  </Animated.View>
+                  <Text style={styles.primaryButtonText}>
+                    Continue as Guest
+                  </Text>
                 </Pressable>
               </Animated.View>
-              )}
 
               <Animated.View entering={FadeInUp.delay(500).duration(600).springify()}>
                 <Pressable style={styles.footerLink} onPress={() => router.push('/sign-in')} disabled={isLoading}>
