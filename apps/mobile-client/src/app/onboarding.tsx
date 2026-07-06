@@ -48,8 +48,8 @@ export default function Onboarding() {
 
   const currentStep = ONBOARDING_STEPS[step];
   
-  const title = i18n.t(currentStep.titleKey, { defaultValue: currentStep.titleFallback || currentStep.titleKey });
-  const subtitle = i18n.t(currentStep.subtitleKey, { defaultValue: currentStep.subtitleFallback || currentStep.subtitleKey });
+  const title = i18n.t(currentStep.titleKey, { defaultValue: (currentStep.titleFallback || currentStep.titleKey) as string });
+  const subtitle = i18n.t(currentStep.subtitleKey, { defaultValue: (currentStep.subtitleFallback || currentStep.subtitleKey) as string });
 
   return (
     <View style={[styles.container, isDesktop && styles.containerDesktop]}>
