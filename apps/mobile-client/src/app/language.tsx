@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInRight, withSpring, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Check, Globe2 } from 'lucide-react-native';

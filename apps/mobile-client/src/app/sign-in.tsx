@@ -6,7 +6,9 @@ import { Image } from 'expo-image';
 import Animated, { FadeInUp, FadeIn, useAnimatedStyle, useSharedValue, withSpring, withTiming, interpolateColor } from 'react-native-reanimated';
 import { Phone, EyeOff, Eye } from 'lucide-react-native';
 import i18n from '../lib/i18n';
-import { getFirebaseAuth, googleProvider, RecaptchaVerifier, signInWithPopup, signInWithPhoneNumber } from '../lib/firebase';
+import { getFirebaseAuth, googleProvider, RecaptchaVerifier, signInWithPopup, signInWithPhoneNumber, firebaseConfig } from '../lib/firebase';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PremiumInput = ({ label, placeholder, secureTextEntry, icon: IconComponent, delay, value, onChangeText, errorMessage, editable = true, keyboardType = 'default' }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -78,6 +80,7 @@ export default function SignIn() {
   const { width } = useWindowDimensions();
   const isDesktop = width > 768;
 
+  const recaptchaVerifier = React.useRef(null);
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -136,17 +139,18 @@ export default function SignIn() {
       setIsLoading(true);
       
       try {
+        const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
+        const auth = getFirebaseAuth();
+        let appVerifier;
         if (Platform.OS === 'web') {
           setupRecaptcha();
-          const appVerifier = window.recaptchaVerifier;
-          const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-          const auth = getFirebaseAuth();
-          const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-          setConfirmationResult(result);
-          setStep(2);
+          appVerifier = window.recaptchaVerifier;
         } else {
-          setPhoneError('Native phone auth pending setup. Use web preview.');
+          appVerifier = recaptchaVerifier.current;
         }
+        const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+        setConfirmationResult(result);
+        setStep(2);
       } catch (error: any) {
         console.error(error);
         setPhoneError(error.message);
@@ -176,7 +180,12 @@ export default function SignIn() {
   };
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={firebaseConfig}
+        attemptInvisibleVerification={true}
+      />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[styles.container, isDesktop && styles.containerDesktop]}
@@ -328,7 +337,7 @@ export default function SignIn() {
 
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 

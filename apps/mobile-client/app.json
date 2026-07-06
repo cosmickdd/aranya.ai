@@ -49,7 +49,12 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true
+        }
+      ],
       [
         "expo-camera",
         {

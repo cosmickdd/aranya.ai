@@ -1,19 +1,13 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-// import { Audio } from 'expo-av'; // REMOVED to fix C++ crash on Expo 57
-const Audio: any = {
-  setAudioModeAsync: async () => {},
-  requestPermissionsAsync: async () => ({ status: 'granted' }),
-  Sound: { createAsync: async () => ({ sound: { setOnPlaybackStatusUpdate: () => {}, unloadAsync: async () => {} } }) },
-  Recording: { createAsync: async () => ({ recording: { setOnRecordingStatusUpdate: () => {}, setProgressUpdateInterval: () => {}, stopAndUnloadAsync: async () => {}, getURI: () => '' } }) },
-  RecordingOptionsPresets: { HIGH_QUALITY: {} }
-};
+import { useAudioRecorder, AudioModule, RecordingPresets, createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
@@ -43,17 +37,14 @@ function getWebAudioContext(): AudioContext {
 async function playBase64Audio(base64: string): Promise<void> {
   if (Platform.OS !== 'web') {
     // ── Native (Android / iOS APK) ── use expo-av Sound
-    let sound: Audio.Sound | null = null;
+    let player: any = null;
     try {
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
-      const { sound: s } = await Audio.Sound.createAsync(
-        { uri: `data:audio/mpeg;base64,${base64}` },
-        { shouldPlay: true }
-      );
-      sound = s;
+      await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+      player = createAudioPlayer(`data:audio/mpeg;base64,${base64}`);
+      player.play();
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(resolve, 60000); // safety timeout
-        s.setOnPlaybackStatusUpdate((status: any) => {
+        player.addListener('playbackStatusUpdate', (status: any) => {
           if (status.isLoaded && status.didJustFinish) {
             clearTimeout(timeout);
             resolve();
@@ -63,7 +54,7 @@ async function playBase64Audio(base64: string): Promise<void> {
     } catch (e) {
       console.error('Native audio playback error:', e);
     } finally {
-      if (sound) { try { await sound.unloadAsync(); } catch (_) {} }
+      if (player && player.release) { try { player.release(); } catch (_) {} }
     }
     return;
   }
@@ -90,17 +81,15 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
   if (Platform.OS !== 'web') {
     let sound: Audio.Sound | null = null;
     try {
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
       const lang = langCode === 'hi' ? 'hi' : 'en';
       const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`;
-      const { sound: s } = await Audio.Sound.createAsync(
-        { uri: ttsUrl },
-        { shouldPlay: true }
-      );
-      sound = s;
+      
+      player = createAudioPlayer(ttsUrl);
+      player.play();
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(resolve, 60000);
-        s.setOnPlaybackStatusUpdate((status: any) => {
+        player.addListener('playbackStatusUpdate', (status: any) => {
           if (status.isLoaded && status.didJustFinish) {
             clearTimeout(timeout);
             resolve();
@@ -110,7 +99,7 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
     } catch (e) {
       console.error('Native fallback playback error:', e);
     } finally {
-      if (sound) { try { await sound.unloadAsync(); } catch (_) {} }
+      if (player && player.release) { try { player.release(); } catch (_) {} }
     }
     return;
   }
@@ -171,6 +160,25 @@ export default function Dashboard() {
   const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
   const [speakerOn, setSpeakerOn] = useState(false);
   const hasSpokenRef = useRef(false);
+  const silenceStartRef = useRef<number>(Date.now());
+  const voiceStateRef = useRef<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
+  useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+
+  // Audio Recorder Hook
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY, (status) => {
+    if (!status.isRecording) return;
+    const metering = status.metering || -160;
+    const now = Date.now();
+    
+    if (metering > -35) {
+      silenceStartRef.current = now;
+      if (!hasSpokenRef.current) hasSpokenRef.current = true;
+    } else {
+      if (hasSpokenRef.current && (now - silenceStartRef.current > 1500) && voiceStateRef.current === 'listening') {
+        stopRecording();
+      } 
+    }
+  });
 
   // Custom WhatsApp Camera Modal States
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -437,13 +445,10 @@ export default function Dashboard() {
     sendMessage(text, img);
   };
 
-  // ── Voice Recording via Expo AV (Universal Web/iOS/Android) ──
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const silenceStartRef = useRef<number>(Date.now());
-
+  // ── Voice Recording via expo-audio (Universal) ──
   const startRecording = async () => {
     try {
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await requestRecordingPermissionsAsync();
       if (permission.status !== 'granted') {
         Alert.alert(
           'Microphone Permission Required',
@@ -454,43 +459,17 @@ export default function Dashboard() {
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      recordingRef.current = recording;
       setVoiceState('listening');
       setVoiceTranscript('');
       hasSpokenRef.current = false;
       silenceStartRef.current = Date.now();
 
-      recording.setOnRecordingStatusUpdate((status) => {
-        if (!status.isRecording) return;
-        
-        // Metering provides dB from -160 (silent) to 0 (loudest)
-        const metering = status.metering || -160;
-        const now = Date.now();
-
-        // -35 dB is a typical threshold for speaking voice
-        if (metering > -35) {
-          silenceStartRef.current = now;
-          if (!hasSpokenRef.current) hasSpokenRef.current = true;
-        } else {
-          // 1.5 seconds of silence after speaking = stop
-          if (hasSpokenRef.current && (now - silenceStartRef.current > 1500)) {
-            stopRecording();
-          } 
-        }
-      });
-      
-      // Update metering 10 times a second for fast VAD
-      recording.setProgressUpdateInterval(100);
-
+      recorder.record();
     } catch (err) {
       console.error('Mic access error:', err);
       Alert.alert(
@@ -503,12 +482,11 @@ export default function Dashboard() {
   };
 
   const stopRecording = async () => {
-    if (recordingRef.current) {
+    if (recorder.isRecording) {
       setVoiceState('processing');
       try {
-        await recordingRef.current.stopAndUnloadAsync();
-        const uri = recordingRef.current.getURI();
-        recordingRef.current = null;
+        await recorder.stop();
+        const uri = recorder.uri;
         
         if (!hasSpokenRef.current || !uri) {
           setVoiceState('idle');
@@ -683,13 +661,12 @@ export default function Dashboard() {
   };
 
   const exitVoiceMode = async () => {
-    if (recordingRef.current) {
+    if (recorder.isRecording) {
       try {
-        await recordingRef.current.stopAndUnloadAsync();
+        await recorder.stop();
       } catch (e) {
         console.error('Error stopping recording:', e);
       }
-      recordingRef.current = null;
     }
     setVoiceMode(false);
     setIsVoiceMinimized(false);
@@ -768,10 +745,10 @@ export default function Dashboard() {
                 style={[vs.pillButton, speakerOn ? vs.pillButtonActive : null]} 
                 onPress={() => {
                   setSpeakerOn(!speakerOn);
-                  Audio.setAudioModeAsync({
-                    allowsRecordingIOS: true,
-                    playsInSilentModeIOS: true,
-                    playThroughEarpieceAndroid: speakerOn, // toggles between speaker/earpiece
+                  setAudioModeAsync({
+                    allowsRecording: true,
+                    playsInSilentMode: true,
+                    shouldRouteThroughEarpiece: speakerOn, // toggles between speaker/earpiece (speakerOn=true means we want speaker, so shouldRouteThroughEarpiece=false)
                   }).catch(() => {});
                 }}
               >
@@ -865,7 +842,7 @@ export default function Dashboard() {
   // NORMAL CHAT MODE
   // ═══════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={cs.safeArea}>
+    <SafeAreaView style={cs.safeArea} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={cs.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Header */}
         <View style={cs.header}>
@@ -950,8 +927,7 @@ export default function Dashboard() {
         </Modal>
 
         {/* Chat Area */}
-        <ImageBackground source={require('../../assets/images/bg.png')} style={cs.chatArea}
-          imageStyle={{ resizeMode: 'repeat', width: '100%', height: '100%' }}>
+        <View style={cs.chatArea}>
           <ScrollView ref={scrollViewRef} contentContainerStyle={cs.chatContent}
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
             <View style={cs.dateBadgeContainer}>
@@ -1013,7 +989,7 @@ export default function Dashboard() {
               </Animated.View>
             )}
           </ScrollView>
-        </ImageBackground>
+        </View>
 
         {/* Image Preview */}
         {selectedImage && (
@@ -1170,7 +1146,7 @@ const vs = StyleSheet.create({
     backgroundColor: '#0b141a',
   },
   bg: { flex: 1, width: '100%', height: '100%' },
-  bgImage: { opacity: 0.05, resizeMode: 'repeat' },
+  bgImage: { opacity: 0.05, resizeMode: 'cover', width: '100%', height: '100%' },
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
