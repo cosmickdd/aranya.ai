@@ -3,7 +3,11 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 
-SplashScreen.preventAutoHideAsync();
+try {
+  SplashScreen.preventAutoHideAsync();
+} catch (e) {
+  console.log('Splash screen prevent hide failed:', e);
+}
 
 export default function Layout() {
   const [loaded, error] = useFonts({
