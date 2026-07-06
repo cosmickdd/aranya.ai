@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { useEffect } from 'react';
