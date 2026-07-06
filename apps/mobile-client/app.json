@@ -7,6 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "aranyaai",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aranya.ai",
