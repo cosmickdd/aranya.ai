@@ -43,12 +43,6 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#208AEF"
-        }
-      ],
       "expo-localization",
       [
         "expo-av",
