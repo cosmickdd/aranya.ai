@@ -44,12 +44,7 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Allow Aranya to access your microphone to listen to you during voice calls."
-        }
-      ],
+
       [
         "expo-camera",
         {
