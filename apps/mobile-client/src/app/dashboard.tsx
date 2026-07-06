@@ -6,7 +6,14 @@ import { Image } from 'expo-image';
 import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
+// import { Audio } from 'expo-av'; // REMOVED to fix C++ crash on Expo 57
+const Audio: any = {
+  setAudioModeAsync: async () => {},
+  requestPermissionsAsync: async () => ({ status: 'granted' }),
+  Sound: { createAsync: async () => ({ sound: { setOnPlaybackStatusUpdate: () => {}, unloadAsync: async () => {} } }) },
+  Recording: { createAsync: async () => ({ recording: { setOnRecordingStatusUpdate: () => {}, setProgressUpdateInterval: () => {}, stopAndUnloadAsync: async () => {}, getURI: () => '' } }) },
+  RecordingOptionsPresets: { HIGH_QUALITY: {} }
+};
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
