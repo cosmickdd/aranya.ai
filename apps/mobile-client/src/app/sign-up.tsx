@@ -7,7 +7,7 @@ import Animated, { FadeInUp, FadeIn, useAnimatedStyle, useSharedValue, withSprin
 import { Phone, EyeOff, Eye, User, Check } from 'lucide-react-native';
 import i18n from '../lib/i18n';
 import { getFirebaseAuth, googleProvider, RecaptchaVerifier, signInWithPopup, signInWithPhoneNumber, firebaseConfig } from '../lib/firebase';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { FirebaseRecaptchaVerifierModal } from 'my-firebase-recaptcha';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PremiumInput = ({ label, placeholder, secureTextEntry, icon: IconComponent, delay, value, onChangeText, errorMessage, editable = true, keyboardType = 'default' }) => {

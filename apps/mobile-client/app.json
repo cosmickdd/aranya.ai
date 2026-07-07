@@ -7,11 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "aranyaai",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aranya.ai",
@@ -38,7 +33,9 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO"
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -49,6 +46,14 @@
     "plugins": [
       "expo-router",
       "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "backgroundColor": "#ffffff",
+          "resizeMode": "contain"
+        }
+      ],
       [
         "expo-audio",
         {
@@ -83,7 +88,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2a97c5e3-f55a-483c-a196-64cf91ebacb8"
+        "projectId": "e5c89387-622a-4384-8b77-8442797972e7"
       }
     }
   }

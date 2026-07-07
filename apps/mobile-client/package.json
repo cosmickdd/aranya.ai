@@ -8,11 +8,11 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "expo": "~57.0.2",
+    "expo-asset": "^57.0.3",
     "expo-audio": "^57.0.0",
     "expo-camera": "^57.0.0",
-    "expo-constants": "~57.0.3",
+    "expo-constants": "57.0.3",
     "expo-device": "~57.0.0",
-    "expo-firebase-recaptcha": "^2.3.1",
     "expo-font": "~57.0.0",
     "expo-glass-effect": "~57.0.0",
     "expo-image": "~57.0.0",
@@ -30,6 +30,7 @@
     "i18n-js": "^4.5.3",
     "lodash": "^4.18.1",
     "lucide-react-native": "^1.23.0",
+    "my-firebase-recaptcha": "npm:expo-firebase-recaptcha@^2.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
@@ -39,7 +40,8 @@
     "react-native-screens": "4.25.2",
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
-    "react-native-webview": "^14.0.1"
+    "react-native-webview": "^13.16.1",
+    "react-native-worklets": "^0.10.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -57,10 +59,19 @@
   },
   "private": true,
   "expo": {
+    "install": {
+      "exclude": [
+        "expo-firebase-recaptcha"
+      ]
+    },
     "autolinking": {
       "exclude": [
-        "expo-firebase-core"
+        "expo-firebase-core",
+        "expo-firebase-recaptcha"
       ]
     }
+  },
+  "overrides": {
+    "expo-constants": "57.0.3"
   }
 }
