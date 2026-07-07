@@ -35,6 +35,19 @@ function getWebAudioContext(): AudioContext {
   return _audioCtx;
 }
 
+let _activeAudioPlayer: any = null;
+async function stopActiveAudio(): Promise<void> {
+  if (_activeAudioPlayer) {
+    try {
+      _activeAudioPlayer.pause();
+      _activeAudioPlayer.release();
+    } catch (e) {
+      console.error('Error stopping active player:', e);
+    }
+    _activeAudioPlayer = null;
+  }
+}
+
 async function playBase64Audio(base64: string): Promise<void> {
   if (Platform.OS !== 'web') {
     const FileSystem = require('expo-file-system');
@@ -44,6 +57,7 @@ async function playBase64Audio(base64: string): Promise<void> {
       await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
       player = createAudioPlayer(fileUri);
+      _activeAudioPlayer = player;
       player.play();
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(resolve, 60000); // safety timeout
@@ -58,6 +72,7 @@ async function playBase64Audio(base64: string): Promise<void> {
     } catch (e) {
       console.error('Native audio playback error:', e);
     } finally {
+      _activeAudioPlayer = null;
       if (player) {
         try { player.release(); } catch (_) {}
       }
@@ -95,6 +110,7 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
       const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`;
       
       player = createAudioPlayer(ttsUrl);
+      _activeAudioPlayer = player;
       player.play();
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(resolve, 60000);
@@ -109,6 +125,7 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
     } catch (e) {
       console.error('Native fallback playback error:', e);
     } finally {
+      _activeAudioPlayer = null;
       if (player) { try { player.release(); } catch (_) {} }
     }
     return;
@@ -384,6 +401,7 @@ export default function Dashboard() {
       setPlayingId(msgId);
       if (audioSource.uri) {
         const player = createAudioPlayer(audioSource.uri);
+        _activeAudioPlayer = player;
         await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
         player.play();
         await new Promise<void>((resolve) => {
@@ -396,6 +414,7 @@ export default function Dashboard() {
             }
           });
         });
+        _activeAudioPlayer = null;
         try { player.release(); } catch (_) {}
       } else if (audioSource.base64) {
         await playBase64Audio(audioSource.base64);
@@ -575,7 +594,7 @@ export default function Dashboard() {
   };
 
   async function stopRecording() {
-    if (recorder.isRecording) {
+    if (recorderState.isRecording) {
       setVoiceState('processing');
       try {
         await recorder.stop();
@@ -630,7 +649,7 @@ export default function Dashboard() {
     }
     setIsRecordingVoiceNote(false);
     setVoiceNoteDuration(0);
-    if (recorder.isRecording) {
+    if (recorderState.isRecording) {
       try {
         await recorder.stop();
       } catch (e) {
@@ -649,7 +668,7 @@ export default function Dashboard() {
     setIsRecordingVoiceNote(false);
     setVoiceNoteDuration(0);
 
-    if (recorder.isRecording) {
+    if (recorderState.isRecording) {
       try {
         await recorder.stop();
         const uri = recorder.uri;
@@ -928,7 +947,7 @@ export default function Dashboard() {
   };
 
   async function exitVoiceMode() {
-    if (recorder.isRecording) {
+    if (recorderState.isRecording) {
       try {
         await recorder.stop();
       } catch (e) {
@@ -941,6 +960,23 @@ export default function Dashboard() {
     setVoiceTranscript('');
     setCallDuration(0);
   }
+
+  const interruptAI = async () => {
+    await stopActiveAudio();
+    setVoiceState('listening');
+    setVoiceTranscript('');
+    hasSpokenRef.current = false;
+    silenceStartRef.current = Date.now();
+    try {
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+      recorder.record();
+    } catch (err) {
+      console.error('Interrupt start mic error:', err);
+    }
+  };
 
   // ═══════════════════════════════════════════════════════
   // VOICE MODE FULL-SCREEN (WhatsApp Style)
@@ -969,7 +1005,14 @@ export default function Dashboard() {
 
           {/* Center — Avatar */}
           <View style={vs.center}>
-            <View style={vs.avatarWrapper}>
+            <Pressable 
+              style={vs.avatarWrapper}
+              onPress={() => {
+                if (voiceState === 'speaking' || voiceState === 'processing') {
+                  interruptAI();
+                }
+              }}
+            >
               {(isListening || isSpeaking) && (
                 <>
                   <Animated.View style={[vs.ripple, rippleStyle1]} />
@@ -983,7 +1026,7 @@ export default function Dashboard() {
               ]}>
                 <Image source={require('../../assets/images/logo.png')} style={vs.avatarImg} contentFit="contain" />
               </Animated.View>
-            </View>
+            </Pressable>
 
             {/* In WhatsApp, time appears here once connected */}
             <Text style={vs.timer}>{formatDuration(callDuration)}</Text>
@@ -1028,7 +1071,7 @@ export default function Dashboard() {
                 onPress={() => {
                   if (isListening) stopRecording();
                   else if (isSpeaking || isProcessing) {
-                    setVoiceState('idle'); // Interrupt
+                    interruptAI();
                   }
                   else if (voiceState === 'idle') startRecording();
                 }}
