@@ -194,6 +194,7 @@ export default function Dashboard() {
   const silenceStartRef = useRef<number>(0);
   const voiceStateRef = useRef<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+  const silenceTimeoutRef = useRef<any>(null);
 
   // Voice Note Mode (inline recording)
   const [isRecordingVoiceNote, setIsRecordingVoiceNote] = useState(false);
@@ -237,7 +238,13 @@ export default function Dashboard() {
     
     if (metering > -48) {
       silenceStartRef.current = now;
-      if (!hasSpokenRef.current) hasSpokenRef.current = true;
+      if (!hasSpokenRef.current) {
+        hasSpokenRef.current = true;
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
+      }
     } else {
       if (
         !isRecordingVoiceNote &&
@@ -250,6 +257,53 @@ export default function Dashboard() {
       }
     }
   }, [recorderState.metering, recorderState.isRecording, isRecordingVoiceNote]);
+
+  const handleSilenceTimeout = useCallback(async () => {
+    if (voiceStateRef.current !== 'listening' || hasSpokenRef.current) return;
+    
+    try {
+      if (recorderState.isRecording) {
+        await recorder.stop();
+      }
+    } catch (_) {}
+    
+    setVoiceState('speaking');
+    const msg = i18n.locale === 'hi' 
+      ? 'Maaf kijiyega, mujhe aapki awaaz nahi sunai di. Kripya thoda tez bolein.' 
+      : 'Sorry, I couldn\'t hear you. Please speak a bit louder.';
+      
+    setVoiceTranscript(msg);
+    
+    try {
+      await playFallbackAudio(msg, i18n.locale);
+    } catch (e) {
+      console.error('Silence feedback TTS error:', e);
+    } finally {
+      setVoiceState('idle');
+      setTimeout(() => {
+        if (voiceModeRef.current) {
+          startRecording();
+        }
+      }, 100);
+    }
+  }, [recorderState.isRecording, recorder]);
+
+  useEffect(() => {
+    if (voiceState === 'listening') {
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = setTimeout(() => {
+        handleSilenceTimeout();
+      }, 8000);
+    } else {
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
+    }
+    return () => {
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+    };
+  }, [voiceState, handleSilenceTimeout]);
 
   // Custom WhatsApp Camera Modal States
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
