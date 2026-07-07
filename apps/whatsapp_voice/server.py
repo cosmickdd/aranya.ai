@@ -277,10 +277,14 @@ def api_chat():
         api_key = request.headers.get("X-Sarvam-API-Key") or (request.json.get("sarvam_api_key") if request.is_json else None)
 
         # Step 1: If user writes in a non-English language, translate to English for Gemini
-        gemini_input = msg or "What is in this document?"
-        if language and language != "en":
+        gemini_input = msg or ("Analyze this image." if image_base64 else "What is in this document?")
+        if language and language != "en" and msg:
             gemini_input = translate_text(msg, source_lang=language, target_lang="en", api_key=api_key)
             logger.info(f"Translated user input to English: {gemini_input[:80]}...")
+        
+        # Inject direct system guardrail reminder to prevent LLM poisoning/leak on files
+        if image_base64 or doc_base64:
+            gemini_input += " (Focus strictly on agriculture/farming. If this image or document is off-topic, decline to answer.)"
         
         # Step 2: Get AI response from Gemini (always in English for consistency)
         ai_text = generate_response(
