@@ -235,7 +235,7 @@ export default function Dashboard() {
     const metering = recorderState.metering ?? -160;
     const now = Date.now();
     
-    if (metering > -35) {
+    if (metering > -48) {
       silenceStartRef.current = now;
       if (!hasSpokenRef.current) hasSpokenRef.current = true;
     } else {
@@ -329,9 +329,21 @@ export default function Dashboard() {
   // Ripple Animations
   const ripple1 = useSharedValue(1);
   const ripple2 = useSharedValue(1);
+  const volumeScale = useSharedValue(1.0);
 
   useEffect(() => {
-    if (voiceState === 'listening' || voiceState === 'speaking') {
+    if (voiceState === 'listening' && recorderState.isRecording) {
+      const metering = recorderState.metering ?? -160;
+      // Map dB range (-60 to 0) to scale (1.0 to 1.8)
+      const targetScale = Math.max(1.0, 1.0 + (metering + 60) / 60 * 0.8);
+      volumeScale.value = withTiming(targetScale, { duration: 150 });
+    } else {
+      volumeScale.value = withTiming(1.0, { duration: 200 });
+    }
+  }, [recorderState.metering, voiceState, recorderState.isRecording, volumeScale]);
+
+  useEffect(() => {
+    if (voiceState === 'speaking') {
       ripple1.value = 1;
       ripple2.value = 1;
       ripple1.value = withRepeat(
@@ -351,22 +363,30 @@ export default function Dashboard() {
       ripple1.value = 1;
       ripple2.value = 1;
     }
-  }, [voiceState]);
+  }, [voiceState, ripple1, ripple2]);
 
   const rippleColor = voiceState === 'speaking' ? 'rgba(23, 198, 144, 0.2)' : 'rgba(251, 146, 60, 0.2)';
 
   const rippleStyle1 = useAnimatedStyle(() => {
+    const scale = voiceState === 'listening' ? volumeScale.value : ripple1.value;
+    const opacity = voiceState === 'listening' 
+      ? interpolate(volumeScale.value, [1.0, 1.8], [0.3, 0.9])
+      : 1 - (ripple1.value - 1) / 0.6;
     return {
-      transform: [{ scale: ripple1.value }],
-      opacity: 1 - (ripple1.value - 1) / 0.6,
+      transform: [{ scale }],
+      opacity,
       backgroundColor: rippleColor,
     };
   });
 
   const rippleStyle2 = useAnimatedStyle(() => {
+    const scale = voiceState === 'listening' ? volumeScale.value * 1.3 : ripple2.value;
+    const opacity = voiceState === 'listening'
+      ? interpolate(volumeScale.value, [1.0, 1.8], [0.15, 0.6])
+      : 1 - (ripple2.value - 1) / 0.6;
     return {
-      transform: [{ scale: ripple2.value }],
-      opacity: 1 - (ripple2.value - 1) / 0.6,
+      transform: [{ scale }],
+      opacity,
       backgroundColor: rippleColor,
     };
   });
@@ -581,6 +601,7 @@ export default function Dashboard() {
       hasSpokenRef.current = false;
       silenceStartRef.current = Date.now();
 
+      await recorder.prepareToRecordAsync();
       recorder.record();
     } catch (err) {
       console.error('Mic access error:', err);
@@ -636,6 +657,7 @@ export default function Dashboard() {
         setVoiceNoteDuration(p => p + 1);
       }, 1000);
 
+      await recorder.prepareToRecordAsync();
       recorder.record();
     } catch (err) {
       console.error('Start voice note error:', err);
@@ -972,6 +994,7 @@ export default function Dashboard() {
         allowsRecording: true,
         playsInSilentMode: true,
       });
+      await recorder.prepareToRecordAsync();
       recorder.record();
     } catch (err) {
       console.error('Interrupt start mic error:', err);
