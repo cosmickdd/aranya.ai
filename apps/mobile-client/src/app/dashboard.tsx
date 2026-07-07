@@ -54,7 +54,11 @@ async function playBase64Audio(base64: string): Promise<void> {
     const fileUri = `${FileSystem.cacheDirectory}temp_voice_${Date.now()}.mp3`;
     let player: any = null;
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+      try {
+        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+      } catch (e) {
+        console.warn('setAudioModeAsync error:', e);
+      }
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
       player = createAudioPlayer(fileUri);
       _activeAudioPlayer = player;
@@ -105,7 +109,11 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
   if (Platform.OS !== 'web') {
     let player: any = null;
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+      try {
+        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+      } catch (e) {
+        console.warn('setAudioModeAsync error:', e);
+      }
       const lang = langCode === 'hi' ? 'hi' : 'en';
       const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`;
       
@@ -476,7 +484,11 @@ export default function Dashboard() {
       if (audioSource.uri) {
         const player = createAudioPlayer(audioSource.uri);
         _activeAudioPlayer = player;
-        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+        try {
+          await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+        } catch (e) {
+          console.warn('setAudioModeAsync error:', e);
+        }
         player.play();
         await new Promise<void>((resolve) => {
           const timeout = setTimeout(resolve, 60000);
@@ -648,10 +660,14 @@ export default function Dashboard() {
         return;
       }
 
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
+      try {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+      } catch (modeErr) {
+        console.warn('setAudioModeAsync error:', modeErr);
+      }
 
       setVoiceState('listening');
       setVoiceTranscript('');
@@ -703,10 +719,14 @@ export default function Dashboard() {
         return;
       }
 
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
+      try {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+      } catch (modeErr) {
+        console.warn('setAudioModeAsync error:', modeErr);
+      }
 
       setIsRecordingVoiceNote(true);
       setVoiceNoteDuration(0);
@@ -1053,10 +1073,14 @@ export default function Dashboard() {
     hasSpokenRef.current = false;
     silenceStartRef.current = Date.now();
     try {
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
+      try {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+      } catch (modeErr) {
+        console.warn('setAudioModeAsync error:', modeErr);
+      }
       await recorder.prepareToRecordAsync();
       recorder.record();
     } catch (err) {
