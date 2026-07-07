@@ -183,6 +183,21 @@ type Message = {
 // ═══════════════════════════════════════════════════════
 const MediaLibrary = Platform.OS !== 'web' ? require('expo-media-library') : null;
 
+const renderFormattedText = (text: string, isSender: boolean) => {
+  if (!text) return '';
+  const parts = text.split('**');
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return (
+        <Text key={index} style={{ fontWeight: '700', color: isSender ? '#ffffff' : '#1f2937' }}>
+          {part}
+        </Text>
+      );
+    }
+    return part;
+  });
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -1496,14 +1511,14 @@ export default function Dashboard() {
                   </View>
                 ) : (
                   !!msg.text && (
-                    <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
+                    <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{renderFormattedText(msg.text, msg.isSender)}</Text>
                   )
                 )}
 
                 {msg.isVoiceNote && !msg.isTranscribing && !!msg.text && (
                   <View style={[cs.transcriptContainer, msg.isSender ? cs.senderTranscriptBg : cs.receivedTranscriptBg]}>
                     <Text style={[cs.transcriptHeaderLabel, msg.isSender ? { color: '#ffedd5' } : { color: '#17c690' }]}>Transcript</Text>
-                    <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
+                    <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{renderFormattedText(msg.text, msg.isSender)}</Text>
                   </View>
                 )}
                 {msg.hasCallAction && (
