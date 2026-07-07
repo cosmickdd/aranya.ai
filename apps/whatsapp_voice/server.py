@@ -262,10 +262,13 @@ def api_chat():
         from core.engine import generate_response
         from services.sarvam import translate_text, text_to_speech
         
+        # Extract API key if delegated by client
+        api_key = request.headers.get("X-Sarvam-API-Key") or (request.json.get("sarvam_api_key") if request.is_json else None)
+
         # Step 1: If user writes in a non-English language, translate to English for Gemini
         gemini_input = msg or "What is in this image?"
         if language and language != "en":
-            gemini_input = translate_text(msg, source_lang=language, target_lang="en")
+            gemini_input = translate_text(msg, source_lang=language, target_lang="en", api_key=api_key)
             logger.info(f"Translated user input to English: {gemini_input[:80]}...")
         
         # Step 2: Get AI response from Gemini (always in English for consistency)
@@ -281,11 +284,11 @@ def api_chat():
         # Step 3: Translate Gemini's English response to user's language via Sarvam
         translated_reply = ai_text
         if language and language != "en":
-            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language)
+            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language, api_key=api_key)
             logger.info(f"Translated AI reply to {language}: {translated_reply[:80]}...")
         
         # Step 4: Generate TTS audio of the translated response via Sarvam
-        audio_b64 = text_to_speech(translated_reply, language=language)
+        audio_b64 = text_to_speech(translated_reply, language=language, api_key=api_key)
         
         return jsonify({
             "reply": translated_reply,
@@ -310,6 +313,9 @@ def api_voice_chat():
     language = request.form.get("language", "hi")
     user_id = request.form.get("user_id", "anonymous_voice_user")
 
+    # Extract API key if delegated by client
+    api_key = request.headers.get("X-Sarvam-API-Key") or request.form.get("sarvam_api_key")
+
     audio_file = request.files.get("audio")
     if not audio_file:
         return jsonify({"error": "No audio file provided"}), 400
@@ -323,7 +329,7 @@ def api_voice_chat():
         from core.engine import generate_response
 
         # Step 1: Sarvam STT — transcribe audio to text in user's language
-        transcript = speech_to_text(audio_bytes, language=language, mime_type=mime_type)
+        transcript = speech_to_text(audio_bytes, language=language, mime_type=mime_type, api_key=api_key)
         if not transcript:
             return jsonify({"error": "Could not understand audio. Please try again."}), 400
         logger.info(f"STT transcript: {transcript}")
@@ -331,7 +337,7 @@ def api_voice_chat():
         # Step 2: Translate to English for Gemini
         gemini_input = transcript
         if language and language != "en":
-            gemini_input = translate_text(transcript, source_lang=language, target_lang="en")
+            gemini_input = translate_text(transcript, source_lang=language, target_lang="en", api_key=api_key)
 
         # Step 3: Gemini AI response
         ai_text = generate_response(
@@ -344,10 +350,10 @@ def api_voice_chat():
         # Step 4: Translate back to user's language
         translated_reply = ai_text
         if language and language != "en":
-            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language)
+            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language, api_key=api_key)
 
         # Step 5: Sarvam TTS
-        audio_b64 = text_to_speech(translated_reply, language=language)
+        audio_b64 = text_to_speech(translated_reply, language=language, api_key=api_key)
 
         return jsonify({
             "transcript": transcript,

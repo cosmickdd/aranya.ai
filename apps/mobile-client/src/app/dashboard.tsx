@@ -575,7 +575,10 @@ export default function Dashboard() {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
       const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Sarvam-API-Key': process.env.EXPO_PUBLIC_SARVAM_API_KEY || '',
+        },
         body: JSON.stringify({
           message: text.trim(),
           user_id: 'demo_user_123',
@@ -793,6 +796,9 @@ export default function Dashboard() {
 
       const response = await fetch(`${apiUrl}/api/voice-chat`, {
         method: 'POST',
+        headers: {
+          'X-Sarvam-API-Key': process.env.EXPO_PUBLIC_SARVAM_API_KEY || '',
+        },
         body: formData,
       });
 
@@ -883,6 +889,9 @@ export default function Dashboard() {
 
       const response = await fetch(`${apiUrl}/api/voice-chat`, {
         method: 'POST',
+        headers: {
+          'X-Sarvam-API-Key': process.env.EXPO_PUBLIC_SARVAM_API_KEY || '',
+        },
         body: formData,
       });
 

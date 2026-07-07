@@ -43,20 +43,22 @@ SPEAKER_MAP = {
 }
 
 
-def _headers():
+def _headers(api_key=None):
+    key = api_key or os.getenv("SARVAM_API_KEY", "")
     return {
-        "api-subscription-key": SARVAM_API_KEY,
+        "api-subscription-key": key,
         "Content-Type": "application/json",
     }
 
 
-def translate_text(text: str, source_lang: str = "auto", target_lang: str = "hi") -> str:
+def translate_text(text: str, source_lang: str = "auto", target_lang: str = "hi", api_key: str = None) -> str:
     """
     Translate text using Sarvam Translate API.
     source_lang/target_lang: short code like 'en', 'hi', 'mr', etc.
     Returns translated text or original text on failure.
     """
-    if not SARVAM_API_KEY:
+    key = api_key or os.getenv("SARVAM_API_KEY", "")
+    if not key:
         logger.warning("SARVAM_API_KEY not set, skipping translation")
         return text
 
@@ -70,7 +72,7 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "hi"
     try:
         resp = requests.post(
             f"{SARVAM_BASE}/translate",
-            headers=_headers(),
+            headers=_headers(api_key=key),
             json={
                 "input": text[:2000],  # Sarvam limit
                 "source_language_code": source_code,
@@ -88,12 +90,13 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "hi"
         return text
 
 
-def text_to_speech(text: str, language: str = "hi") -> str:
+def text_to_speech(text: str, language: str = "hi", api_key: str = None) -> str:
     """
     Convert text to speech using Sarvam TTS API (bulbul:v3).
     Returns base64-encoded WAV audio string, or empty string on failure.
     """
-    if not SARVAM_API_KEY:
+    key = api_key or os.getenv("SARVAM_API_KEY", "")
+    if not key:
         logger.warning("SARVAM_API_KEY not set, skipping TTS")
         return ""
 
@@ -105,7 +108,7 @@ def text_to_speech(text: str, language: str = "hi") -> str:
         chunk = text[:2500]
         resp = requests.post(
             f"{SARVAM_BASE}/text-to-speech",
-            headers=_headers(),
+            headers=_headers(api_key=key),
             json={
                 "inputs": [chunk],
                 "target_language_code": lang_code,
@@ -129,7 +132,7 @@ def text_to_speech(text: str, language: str = "hi") -> str:
         return ""
 
 
-def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "audio/webm") -> str:
+def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "audio/webm", api_key: str = None) -> str:
     """
     Transcribe audio using Sarvam STT API (saaras:v2).
     audio_bytes : raw bytes of the audio file
@@ -137,7 +140,8 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
     mime_type   : MIME type of the audio
     Returns transcribed text or empty string on failure.
     """
-    if not SARVAM_API_KEY:
+    key = api_key or os.getenv("SARVAM_API_KEY", "")
+    if not key:
         logger.warning("SARVAM_API_KEY not set, skipping STT")
         return ""
 
@@ -164,7 +168,7 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
             "with_timestamps": "false",
         }
         headers = {
-            "api-subscription-key": SARVAM_API_KEY,
+            "api-subscription-key": key,
         }
         resp = requests.post(
             f"{SARVAM_BASE}/speech-to-text",
