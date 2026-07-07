@@ -5,8 +5,8 @@ Same conversational logic as the Telegram MVP — single SQLite DB, full memory.
 import os
 import logging
 
-from google import genai
-from google.genai import types
+from google import genai  # type: ignore
+from google.genai import types  # type: ignore
 from db.database import get_session, User, Message
 
 logger = logging.getLogger(__name__)
