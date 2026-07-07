@@ -4,12 +4,14 @@ import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, KeyboardAvoid
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw } from 'lucide-react-native';
+import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw, FileText, MapPin } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, interpolate } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets, createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
+import * as Location from 'expo-location';
 import i18n from '../lib/i18n';
 import { fetchSarvamTTS } from '../lib/sarvam';
 import { logoutUser } from '../lib/firebase';
@@ -171,6 +173,9 @@ type Message = {
   isVoiceNote?: boolean;
   isTranscribing?: boolean;
   voiceDuration?: number;
+  isDocument?: boolean;
+  doc_name?: string;
+  doc_uri?: string;
 };
 
 // ═══════════════════════════════════════════════════════
@@ -184,6 +189,8 @@ export default function Dashboard() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<{ uri: string; name: string; mimeType?: string; base64?: string } | null>(null);
+  const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -567,9 +574,67 @@ export default function Dashboard() {
     }
   };
 
+  // ── Document Picker ──
+  const pickDocument = async () => {
+    setAttachmentSheetVisible(false);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*', // allow all documents/files
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        let base64Data = '';
+        
+        if (Platform.OS !== 'web') {
+          const FileSystem = require('expo-file-system');
+          base64Data = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        }
+        
+        setSelectedDoc({
+          uri: asset.uri,
+          name: asset.name,
+          mimeType: asset.mimeType,
+          base64: base64Data,
+        });
+      }
+    } catch (error) {
+      console.error('Document picker error:', error);
+    }
+  };
+
+  // ── Share Location ──
+  const shareLocation = async () => {
+    setAttachmentSheetVisible(false);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location access is required to share coordinates.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      const lat = loc.coords.latitude;
+      const lon = loc.coords.longitude;
+      
+      const geocode = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
+      const city = geocode[0]?.city || geocode[0]?.district || geocode[0]?.region || '';
+      
+      const locationLabel = city 
+        ? `${city} (Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)})`
+        : `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+
+      sendMessage(`Location: ${locationLabel}`);
+    } catch (error) {
+      console.error('Location share error:', error);
+    }
+  };
+
   // ── Send Message (shared by chat and voice) ──
-  const sendMessage = useCallback(async (text: string, imgB64?: string | null) => {
-    if (!text.trim() && !imgB64) return;
+  const sendMessage = useCallback(async (text: string, imgB64?: string | null, docAttachment?: { uri: string; name: string; mimeType?: string; base64?: string } | null) => {
+    if (!text.trim() && !imgB64 && !docAttachment) return;
 
     const newMsg: Message = {
       id: Date.now().toString(),
@@ -578,6 +643,9 @@ export default function Dashboard() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'sent',
       image_base64: imgB64 || undefined,
+      isDocument: !!docAttachment,
+      doc_name: docAttachment?.name,
+      doc_uri: docAttachment?.uri,
     };
     setMessages(prev => [...prev, newMsg]);
     setIsTyping(true);
@@ -596,6 +664,8 @@ export default function Dashboard() {
           user_id: 'demo_user_123',
           language: i18n.locale,
           image_base64: imgB64,
+          doc_base64: docAttachment?.base64 || undefined,
+          doc_mime: docAttachment?.mimeType || 'application/pdf',
         }),
       });
       const data = await response.json();
@@ -641,9 +711,11 @@ export default function Dashboard() {
   const handleSend = () => {
     const text = inputText.trim();
     const img = selectedImage;
+    const doc = selectedDoc;
     setInputText('');
     setSelectedImage(null);
-    sendMessage(text, img);
+    setSelectedDoc(null);
+    sendMessage(text, img, doc);
   };
 
   // ── Voice Recording via expo-audio (Universal) ──
@@ -1364,6 +1436,20 @@ export default function Dashboard() {
                   <Image source={{ uri: msg.image_base64 }} style={cs.messageImage} contentFit="cover" />
                 )}
                 
+                {msg.isDocument && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: msg.isSender ? '#10b981' : '#f3f4f6', borderRadius: 8, padding: 12, marginBottom: 6, borderWidth: 1, borderColor: msg.isSender ? '#059669' : '#e5e7eb' }}>
+                    <FileText color={msg.isSender ? '#ffffff' : '#8b5cf6'} size={28} style={{ marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: msg.isSender ? '#ffffff' : '#374151' }} numberOfLines={1}>
+                        {msg.doc_name || 'Document'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: msg.isSender ? '#a7f3d0' : '#6b7280', marginTop: 2 }}>
+                        PDF / Document
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                
                 {msg.isVoiceNote ? (
                   <View style={cs.voiceMessageContainer}>
                     <Pressable 
@@ -1456,6 +1542,21 @@ export default function Dashboard() {
           </View>
         )}
 
+        {/* Document Preview */}
+        {selectedDoc && (
+          <View style={cs.imagePreviewContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f3f4f6', borderRadius: 8, padding: 10, marginRight: 40, width: '90%' }}>
+              <FileText color="#8b5cf6" size={24} style={{ marginRight: 8 }} />
+              <Text style={{ flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' }} numberOfLines={1}>
+                {selectedDoc.name}
+              </Text>
+            </View>
+            <Pressable style={cs.removeImageBtn} onPress={() => setSelectedDoc(null)}>
+              <X color="#fff" size={14} />
+            </Pressable>
+          </View>
+        )}
+
         {/* Input */}
         <View style={cs.inputArea}>
           {isRecordingVoiceNote ? (
@@ -1472,7 +1573,7 @@ export default function Dashboard() {
             <View style={cs.inputContainer}>
               <TextInput style={cs.textInput} placeholder="Message Aranya..." placeholderTextColor="#6b7280"
                 value={inputText} onChangeText={setInputText} onSubmitEditing={handleSend} />
-              <Pressable style={cs.iconButton} onPress={() => pickImage(false)}>
+              <Pressable style={cs.iconButton} onPress={() => setAttachmentSheetVisible(true)}>
                 <Paperclip color="#4b5563" size={20} />
               </Pressable>
               <Pressable style={cs.iconButton} onPress={() => setCameraModalVisible(true)}>
@@ -1484,7 +1585,7 @@ export default function Dashboard() {
             <Pressable style={cs.sendButton} onPress={sendVoiceNote}>
               <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
             </Pressable>
-          ) : inputText.trim().length > 0 || selectedImage ? (
+          ) : inputText.trim().length > 0 || selectedImage || selectedDoc ? (
             <Pressable style={cs.sendButton} onPress={handleSend}>
               <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
             </Pressable>
@@ -1601,6 +1702,79 @@ export default function Dashboard() {
             </Pressable>
           </View>
         </View>
+      </Modal>
+
+      {/* WhatsApp Attachment Sheet Modal */}
+      <Modal
+        visible={attachmentSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAttachmentSheetVisible(false)}
+      >
+        <Pressable 
+          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)', justifyContent: 'flex-end' }} 
+          onPress={() => setAttachmentSheetVisible(false)}
+        >
+          <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }}>
+            {/* Header / Drag indicator */}
+            <View style={{ width: 40, height: 5, backgroundColor: '#e5e7eb', borderRadius: 3, alignSelf: 'center', marginBottom: 20 }} />
+            
+            {/* Grid Row */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', flexWrap: 'wrap' }}>
+              
+              {/* Document Option */}
+              <Pressable 
+                style={{ alignItems: 'center', marginHorizontal: 12, marginVertical: 8, width: 80 }}
+                onPress={pickDocument}
+              >
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#7c3aed', justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}>
+                  <FileText color="#ffffff" size={24} />
+                </View>
+                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Document</Text>
+              </Pressable>
+
+              {/* Camera Option */}
+              <Pressable 
+                style={{ alignItems: 'center', marginHorizontal: 12, marginVertical: 8, width: 80 }}
+                onPress={() => {
+                  setAttachmentSheetVisible(false);
+                  setCameraModalVisible(true);
+                }}
+              >
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#ec4899', justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: '#ec4899', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}>
+                  <CameraIcon color="#ffffff" size={24} />
+                </View>
+                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Camera</Text>
+              </Pressable>
+
+              {/* Gallery Option */}
+              <Pressable 
+                style={{ alignItems: 'center', marginHorizontal: 12, marginVertical: 8, width: 80 }}
+                onPress={() => {
+                  setAttachmentSheetVisible(false);
+                  pickImage(false);
+                }}
+              >
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}>
+                  <ImageIcon color="#ffffff" size={24} />
+                </View>
+                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Gallery</Text>
+              </Pressable>
+
+              {/* Location Option */}
+              <Pressable 
+                style={{ alignItems: 'center', marginHorizontal: 12, marginVertical: 8, width: 80 }}
+                onPress={shareLocation}
+              >
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}>
+                  <MapPin color="#ffffff" size={24} />
+                </View>
+                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Location</Text>
+              </Pressable>
+
+            </View>
+          </View>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );

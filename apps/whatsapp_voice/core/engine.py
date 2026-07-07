@@ -101,6 +101,8 @@ def generate_response(
     msg_type: str = "text",
     image_bytes: bytes = None,
     image_mime: str = "image/jpeg",
+    doc_bytes: bytes = None,
+    doc_mime: str = "application/pdf",
     voice_mode: bool = False,
     user_location: str = None,
     language: str = None,
@@ -135,6 +137,10 @@ def generate_response(
         if image_bytes:
             current_parts.append(
                 types.Part.from_bytes(data=image_bytes, mime_type=image_mime)
+            )
+        if doc_bytes:
+            current_parts.append(
+                types.Part.from_bytes(data=doc_bytes, mime_type=doc_mime)
             )
 
         # Inject live data as context alongside the user's message

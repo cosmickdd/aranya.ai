@@ -240,9 +240,11 @@ def api_chat():
     user_id = data.get("user_id", "anonymous_mobile_user")
     language = data.get("language", "en")
     image_base64 = data.get("image_base64", None)
+    doc_base64 = data.get("doc_base64", None)
+    doc_mime = data.get("doc_mime", "application/pdf")
     
-    if not msg and not image_base64:
-        return jsonify({"error": "Missing message or image"}), 400
+    if not msg and not image_base64 and not doc_base64:
+        return jsonify({"error": "Missing message, image, or document"}), 400
         
     import base64
     image_bytes = None
@@ -258,6 +260,15 @@ def api_chat():
         except Exception as e:
             logger.error(f"Base64 decode error: {e}")
             
+    doc_bytes = None
+    if doc_base64:
+        try:
+            if "," in doc_base64:
+                _, doc_base64 = doc_base64.split(",", 1)
+            doc_bytes = base64.b64decode(doc_base64)
+        except Exception as e:
+            logger.error(f"Doc base64 decode error: {e}")
+            
     try:
         from core.engine import generate_response
         from services.sarvam import translate_text, text_to_speech
@@ -266,7 +277,7 @@ def api_chat():
         api_key = request.headers.get("X-Sarvam-API-Key") or (request.json.get("sarvam_api_key") if request.is_json else None)
 
         # Step 1: If user writes in a non-English language, translate to English for Gemini
-        gemini_input = msg or "What is in this image?"
+        gemini_input = msg or "What is in this document?"
         if language and language != "en":
             gemini_input = translate_text(msg, source_lang=language, target_lang="en", api_key=api_key)
             logger.info(f"Translated user input to English: {gemini_input[:80]}...")
@@ -278,7 +289,9 @@ def api_chat():
             voice_mode=False, 
             language="en",  # Always get English from Gemini
             image_bytes=image_bytes,
-            image_mime=image_mime
+            image_mime=image_mime,
+            doc_bytes=doc_bytes,
+            doc_mime=doc_mime
         )
         
         # Step 3: Translate Gemini's English response to user's language via Sarvam
