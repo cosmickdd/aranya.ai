@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.aranya.ai",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
@@ -46,6 +47,7 @@
     "plugins": [
       "expo-router",
       "expo-localization",
+      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
@@ -79,7 +81,9 @@
           "photosPermission": "Allow Aranya to access your photos to attach to messages.",
           "cameraPermission": "Allow Aranya to use your camera to photograph your crops."
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true,

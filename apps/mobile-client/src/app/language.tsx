@@ -25,15 +25,19 @@ export default function LanguageSelection() {
   const isDesktop = width > 768;
   
   const [selectedLang, setSelectedLang] = useState(i18n.locale.includes('hi') ? 'hi' : 'en');
-  const buttonScale = useSharedValue(1);
+  const buttonScaleRef = React.useRef(useSharedValue(1));
 
   useEffect(() => {
     i18n.locale = selectedLang;
   }, [selectedLang]);
 
   const animatedButton = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
+    transform: [{ scale: buttonScaleRef.current.value }],
   }));
+
+  const pressButton = (isPressed: boolean) => {
+    buttonScaleRef.current.value = withSpring(isPressed ? 0.95 : 1);
+  };
 
   const handleContinue = () => {
     // After selecting language, go to onboarding slides
@@ -88,8 +92,8 @@ export default function LanguageSelection() {
 
         <Animated.View entering={FadeInUp.delay(600).duration(600).springify()} style={styles.footer}>
           <Pressable 
-            onPressIn={() => (buttonScale.value = withSpring(0.95))}
-            onPressOut={() => (buttonScale.value = withSpring(1))}
+            onPressIn={() => pressButton(true)}
+            onPressOut={() => pressButton(false)}
             onPress={handleContinue}
           >
             <Animated.View style={[styles.button, animatedButton]}>

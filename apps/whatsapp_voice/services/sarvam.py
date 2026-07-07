@@ -146,7 +146,15 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
     try:
         # Sarvam STT uses multipart/form-data
         import io
-        ext = "webm" if "webm" in mime_type else "wav"
+        if "webm" in mime_type:
+            ext = "webm"
+        elif "m4a" in mime_type or "mp4" in mime_type:
+            ext = "m4a"
+        elif "caf" in mime_type:
+            ext = "caf"
+        else:
+            ext = "wav"
+            
         files = {
             "file": (f"audio.{ext}", io.BytesIO(audio_bytes), mime_type),
         }

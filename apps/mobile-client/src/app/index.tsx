@@ -9,11 +9,15 @@ export default function Welcome() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width > 768;
-  const buttonScale = useSharedValue(1);
+  const buttonScaleRef = React.useRef(useSharedValue(1));
 
   const animatedButton = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
+    transform: [{ scale: buttonScaleRef.current.value }],
   }));
+
+  const pressButton = (isPressed: boolean) => {
+    buttonScaleRef.current.value = withSpring(isPressed ? 0.95 : 1);
+  };
 
   const handleGetStarted = () => {
     // Navigate to language selection
@@ -47,8 +51,8 @@ export default function Welcome() {
         {/* Bottom Action */}
         <Animated.View entering={FadeInUp.delay(600).duration(800).springify()} style={styles.footer}>
           <Pressable 
-            onPressIn={() => (buttonScale.value = withSpring(0.95))}
-            onPressOut={() => (buttonScale.value = withSpring(1))}
+            onPressIn={() => pressButton(true)}
+            onPressOut={() => pressButton(false)}
             onPress={handleGetStarted}
           >
             <Animated.View style={[styles.button, animatedButton]}>

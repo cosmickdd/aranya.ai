@@ -6,7 +6,8 @@ import { Image } from 'expo-image';
 import Animated, { FadeInUp, FadeIn, useAnimatedStyle, useSharedValue, withSpring, withTiming, interpolateColor } from 'react-native-reanimated';
 import { Phone, EyeOff, Eye, User, Check } from 'lucide-react-native';
 import i18n from '../lib/i18n';
-import { getFirebaseAuth, googleProvider, RecaptchaVerifier, signInWithPopup, signInWithPhoneNumber, firebaseConfig } from '../lib/firebase';
+import { getFirebaseAuth, loginWithPhone, loginWithGoogle, firebaseConfig, isNativeAuthAvailable } from '../lib/firebase';
+import { RecaptchaVerifier } from 'firebase/auth';
 import { FirebaseRecaptchaVerifierModal } from 'my-firebase-recaptcha';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -94,38 +95,43 @@ export default function SignUp() {
   const [termsError, setTermsError] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
 
-  const buttonScale = useSharedValue(1);
-  const googleScale = useSharedValue(1);
+  const buttonScaleRef = React.useRef(useSharedValue(1));
+  const googleScaleRef = React.useRef(useSharedValue(1));
 
   const animatedButton = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
+    transform: [{ scale: buttonScaleRef.current.value }],
   }));
   const animatedGoogle = useAnimatedStyle(() => ({
-    transform: [{ scale: googleScale.value }],
+    transform: [{ scale: googleScaleRef.current.value }],
   }));
+
+  const pressGoogle = (isPressed: boolean) => {
+    googleScaleRef.current.value = withSpring(isPressed ? 0.96 : 1);
+  };
+  const pressButton = (isPressed: boolean) => {
+    buttonScaleRef.current.value = withSpring(isPressed ? 0.96 : 1);
+  };
 
   const validatePhone = (p) => p.length >= 10;
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
+    if (Platform.OS === 'web' && !window.recaptchaVerifier) {
       window.recaptchaVerifier = new RecaptchaVerifier(getFirebaseAuth(), 'recaptcha-container', {
         size: 'invisible',
-        callback: (response) => {
-          // reCAPTCHA solved
-        }
+        callback: () => {}
       });
     }
   };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setPhoneError('');
     try {
-      const auth = getFirebaseAuth();
-      await signInWithPopup(auth, googleProvider);
-      router.push('/dashboard');
+      await loginWithGoogle();
+      router.replace('/dashboard');
     } catch (error: any) {
       console.error(error);
-      setPhoneError(error.message);
+      setPhoneError(error.message || 'Google Sign-Up failed');
     } finally {
       setIsLoading(false);
     }
@@ -156,20 +162,21 @@ export default function SignUp() {
       
       try {
         const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-        const auth = getFirebaseAuth();
         let appVerifier;
-        if (Platform.OS === 'web') {
-          setupRecaptcha();
-          appVerifier = window.recaptchaVerifier;
-        } else {
-          appVerifier = recaptchaVerifier.current;
+        if (!isNativeAuthAvailable) {
+          if (Platform.OS === 'web') {
+            setupRecaptcha();
+            appVerifier = window.recaptchaVerifier;
+          } else {
+            appVerifier = recaptchaVerifier.current;
+          }
         }
-        const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+        const result = await loginWithPhone(formattedPhone, appVerifier);
         setConfirmationResult(result);
         setStep(2);
       } catch (error: any) {
         console.error(error);
-        setPhoneError(error.message);
+        setPhoneError(error.message || 'Failed to send OTP. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -184,7 +191,7 @@ export default function SignUp() {
       try {
         if (confirmationResult) {
           await confirmationResult.confirm(otp);
-          router.push('/dashboard');
+          router.replace('/dashboard');
         }
       } catch (error: any) {
         console.error(error);
@@ -197,20 +204,22 @@ export default function SignUp() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={firebaseConfig}
-        attemptInvisibleVerification={true}
-      />
+      {!isNativeAuthAvailable && Platform.OS !== 'web' && (
+        <FirebaseRecaptchaVerifierModal
+          ref={recaptchaVerifier}
+          firebaseConfig={firebaseConfig}
+          attemptInvisibleVerification={true}
+        />
+      )}
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[styles.container, isDesktop && styles.containerDesktop]}
       >
         <View style={[styles.card, isDesktop && styles.cardDesktop]}>
           <ScrollView 
-            contentContainerStyle={[styles.formScroll, isDesktop && styles.formScrollDesktop]}
+            contentContainerStyle={[styles.formScroll, isDesktop && styles.formScrollDesktop, { flexGrow: 1 }]}
             showsVerticalScrollIndicator={false}
-            bounces={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.formContainer}>
               <Animated.Text entering={FadeInUp.delay(100).duration(600).springify()} style={styles.title}>
@@ -220,10 +229,14 @@ export default function SignUp() {
                 Enjoy excellent features as a Modern Farmer.
               </Animated.Text>
 
+              {Platform.OS === 'web' && (
+                <View nativeID="recaptcha-container" />
+              )}
+
               <Animated.View entering={FadeInUp.delay(200).duration(600).springify()}>
                 <Pressable 
-                  onPressIn={() => (googleScale.value = withSpring(0.97))}
-                  onPressOut={() => (googleScale.value = withSpring(1))}
+                  onPressIn={() => pressGoogle(true)}
+                  onPressOut={() => pressGoogle(false)}
                   onPress={handleGoogleSignIn}
                   disabled={isLoading}
                 >
@@ -236,8 +249,6 @@ export default function SignUp() {
                   </Animated.View>
                 </Pressable>
               </Animated.View>
-
-              <View nativeID="recaptcha-container" />
 
               <Animated.View entering={FadeInUp.delay(250).duration(600).springify()} style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
@@ -317,8 +328,8 @@ export default function SignUp() {
 
                   <Animated.View entering={FadeInUp.delay(450).duration(600).springify()}>
                     <Pressable 
-                      onPressIn={() => (buttonScale.value = withSpring(0.95))}
-                      onPressOut={() => (buttonScale.value = withSpring(1))}
+                      onPressIn={() => pressButton(true)}
+                      onPressOut={() => pressButton(false)}
                       onPress={handlePrimaryAction}
                       disabled={isLoading}
                     >
@@ -339,8 +350,8 @@ export default function SignUp() {
               {step === 2 && (
                 <Animated.View entering={FadeInUp.delay(500).duration(600).springify()}>
                   <Pressable 
-                    onPressIn={() => (buttonScale.value = withSpring(0.95))}
-                    onPressOut={() => (buttonScale.value = withSpring(1))}
+                    onPressIn={() => pressButton(true)}
+                    onPressOut={() => pressButton(false)}
                     onPress={handlePrimaryAction}
                     disabled={isLoading}
                   >
@@ -357,17 +368,20 @@ export default function SignUp() {
                 </Animated.View>
               )}
 
-              {/* GUEST LOGIN FOR NATIVE TESTING */}
-              <Animated.View entering={FadeInUp.delay(530).duration(600).springify()}>
-                <Pressable 
-                  style={[styles.primaryButton, { backgroundColor: '#17c690', marginTop: 0 }]}
-                  onPress={() => router.push('/dashboard')}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    Continue as Guest
-                  </Text>
-                </Pressable>
-              </Animated.View>
+              {!isNativeAuthAvailable && (
+                <Animated.View entering={FadeInUp.delay(530).duration(600).springify()}>
+                  <Pressable 
+                    onPressIn={() => pressButton(true)}
+                    onPressOut={() => pressButton(false)}
+                    style={[styles.primaryButton, { backgroundColor: '#17c690', marginTop: 12 }]}
+                    onPress={() => router.replace('/dashboard')}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      Continue as Guest (Dev Bypass)
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              )}
 
               <Animated.View entering={FadeInUp.delay(500).duration(600).springify()}>
                 <Pressable style={styles.footerLink} onPress={() => router.push('/sign-in')} disabled={isLoading}>

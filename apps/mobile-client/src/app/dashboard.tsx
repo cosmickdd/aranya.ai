@@ -1,17 +1,18 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, KeyboardAvoidingView, Platform, ImageBackground, ActivityIndicator, Modal, Dimensions, Alert, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw } from 'lucide-react-native';
-import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, interpolate } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-import { useAudioRecorder, AudioModule, RecordingPresets, createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets, createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../lib/i18n';
 import { fetchSarvamTTS } from '../lib/sarvam';
+import { logoutUser } from '../lib/firebase';
 
 // ═══════════════════════════════════════════════════════
 // AUDIO HELPERS — cross-platform (Web Audio API on web, expo-av on native)
@@ -36,17 +37,20 @@ function getWebAudioContext(): AudioContext {
 
 async function playBase64Audio(base64: string): Promise<void> {
   if (Platform.OS !== 'web') {
-    // ── Native (Android / iOS APK) ── use expo-av Sound
+    const FileSystem = require('expo-file-system');
+    const fileUri = `${FileSystem.cacheDirectory}temp_voice_${Date.now()}.mp3`;
     let player: any = null;
     try {
       await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
-      player = createAudioPlayer(`data:audio/mpeg;base64,${base64}`);
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      player = createAudioPlayer(fileUri);
       player.play();
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(resolve, 60000); // safety timeout
-        player.addListener('playbackStatusUpdate', (status: any) => {
-          if (status.isLoaded && status.didJustFinish) {
+        const subscription = player.addListener('playbackStatusUpdate', (status: any) => {
+          if (status.didJustFinish) {
             clearTimeout(timeout);
+            subscription.remove();
             resolve();
           }
         });
@@ -54,7 +58,12 @@ async function playBase64Audio(base64: string): Promise<void> {
     } catch (e) {
       console.error('Native audio playback error:', e);
     } finally {
-      if (player && player.release) { try { player.release(); } catch (_) {} }
+      if (player) {
+        try { player.release(); } catch (_) {}
+      }
+      try {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      } catch (_) {}
     }
     return;
   }
@@ -79,7 +88,7 @@ async function playBase64Audio(base64: string): Promise<void> {
 
 async function playFallbackAudio(text: string, langCode: string): Promise<void> {
   if (Platform.OS !== 'web') {
-    let sound: Audio.Sound | null = null;
+    let player: any = null;
     try {
       await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
       const lang = langCode === 'hi' ? 'hi' : 'en';
@@ -89,9 +98,10 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
       player.play();
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(resolve, 60000);
-        player.addListener('playbackStatusUpdate', (status: any) => {
-          if (status.isLoaded && status.didJustFinish) {
+        const subscription = player.addListener('playbackStatusUpdate', (status: any) => {
+          if (status.didJustFinish) {
             clearTimeout(timeout);
+            subscription.remove();
             resolve();
           }
         });
@@ -99,7 +109,7 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
     } catch (e) {
       console.error('Native fallback playback error:', e);
     } finally {
-      if (player && player.release) { try { player.release(); } catch (_) {} }
+      if (player) { try { player.release(); } catch (_) {} }
     }
     return;
   }
@@ -132,6 +142,10 @@ type Message = {
   status?: 'sent' | 'delivered' | 'read';
   image_base64?: string;
   audio_base64?: string;
+  audio_uri?: string;
+  isVoiceNote?: boolean;
+  isTranscribing?: boolean;
+  voiceDuration?: number;
 };
 
 // ═══════════════════════════════════════════════════════
@@ -160,25 +174,65 @@ export default function Dashboard() {
   const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
   const [speakerOn, setSpeakerOn] = useState(false);
   const hasSpokenRef = useRef(false);
-  const silenceStartRef = useRef<number>(Date.now());
+  const silenceStartRef = useRef<number>(0);
   const voiceStateRef = useRef<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
 
+  // Voice Note Mode (inline recording)
+  const [isRecordingVoiceNote, setIsRecordingVoiceNote] = useState(false);
+  const [voiceNoteDuration, setVoiceNoteDuration] = useState(0);
+  const voiceNoteTimerRef = useRef<any>(null);
+
+  // Pulsing dot animation for inline recording
+  const recordPulse = useSharedValue(1);
+  useEffect(() => {
+    if (isRecordingVoiceNote) {
+      recordPulse.value = withRepeat(
+        withTiming(1.4, { duration: 1000 }),
+        -1,
+        true
+      );
+    } else {
+      recordPulse.value = 1;
+    }
+  }, [isRecordingVoiceNote]);
+
+  const redDotStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: recordPulse.value }],
+      opacity: interpolate(recordPulse.value, [1, 1.4], [1, 0.5]),
+    };
+  });
+
   // Audio Recorder Hook
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY, (status) => {
-    if (!status.isRecording) return;
-    const metering = status.metering || -160;
+  const recorder = useAudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    isMeteringEnabled: true,
+  });
+
+  const recorderState = useAudioRecorderState(recorder, 200);
+
+  // Monitor voice levels for Voice Activity Detection (VAD) during calls
+  useEffect(() => {
+    if (!recorderState.isRecording) return;
+    const metering = recorderState.metering ?? -160;
     const now = Date.now();
     
     if (metering > -35) {
       silenceStartRef.current = now;
       if (!hasSpokenRef.current) hasSpokenRef.current = true;
     } else {
-      if (hasSpokenRef.current && (now - silenceStartRef.current > 1500) && voiceStateRef.current === 'listening') {
+      if (
+        !isRecordingVoiceNote &&
+        hasSpokenRef.current &&
+        silenceStartRef.current > 0 &&
+        (now - silenceStartRef.current > 1800) &&
+        voiceStateRef.current === 'listening'
+      ) {
         stopRecording();
-      } 
+      }
     }
-  });
+  }, [recorderState.metering, recorderState.isRecording, isRecordingVoiceNote]);
 
   // Custom WhatsApp Camera Modal States
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -187,6 +241,30 @@ export default function Dashboard() {
   const [cameraType, setCameraType] = useState<'back' | 'front'>(Platform.OS === 'web' ? 'front' : 'back');
   const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; uri: string }[]>([]);
   const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // Hardware back button behavior
+  useEffect(() => {
+    const backAction = () => {
+      if (voiceMode) {
+        exitVoiceMode();
+        return true;
+      }
+      if (cameraModalVisible) {
+        setCameraModalVisible(false);
+        return true;
+      }
+      // Exit app directly from main dashboard layout rather than popping auth screens
+      BackHandler.exitApp();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [voiceMode, cameraModalVisible]);
   
   const [permission, requestPermission] = useCameraPermissions();
   const hasCameraPermission = permission ? permission.granted : false;
@@ -288,12 +366,8 @@ export default function Dashboard() {
 
   // Call timer
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (voiceMode) {
-      interval = setInterval(() => setCallDuration(p => p + 1), 1000);
-    } else {
-      setCallDuration(0);
-    }
+    if (!voiceMode) return;
+    const interval = setInterval(() => setCallDuration(p => p + 1), 1000);
     return () => clearInterval(interval);
   }, [voiceMode]);
 
@@ -304,14 +378,31 @@ export default function Dashboard() {
   };
 
   // ── Audio Playback ──
-  const playAudio = async (audioBase64: string, msgId: string) => {
+  const playAudio = async (audioSource: { base64?: string; uri?: string }, msgId: string) => {
     try {
       if (playingId === msgId) { setPlayingId(null); return; }
       setPlayingId(msgId);
-      await playBase64Audio(audioBase64);
+      if (audioSource.uri) {
+        const player = createAudioPlayer(audioSource.uri);
+        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+        player.play();
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(resolve, 60000);
+          const subscription = player.addListener('playbackStatusUpdate', (status: any) => {
+            if (status.didJustFinish) {
+              clearTimeout(timeout);
+              subscription.remove();
+              resolve();
+            }
+          });
+        });
+        try { player.release(); } catch (_) {}
+      } else if (audioSource.base64) {
+        await playBase64Audio(audioSource.base64);
+      }
       setPlayingId(null);
     } catch (error) {
-      console.error('Audio error:', error);
+      console.error('Audio play error:', error);
       setPlayingId(null);
     }
   };
@@ -409,6 +500,8 @@ export default function Dashboard() {
           isSender: false,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           audio_base64: data.audio_base64 || undefined,
+          isVoiceNote: !!data.audio_base64,
+          voiceDuration: data.audio_base64 ? Math.ceil(data.reply.length / 15) : undefined,
         };
         setMessages(prev => [...prev, reply]);
 
@@ -481,7 +574,7 @@ export default function Dashboard() {
     }
   };
 
-  const stopRecording = async () => {
+  async function stopRecording() {
     if (recorder.isRecording) {
       setVoiceState('processing');
       try {
@@ -499,7 +592,175 @@ export default function Dashboard() {
         setVoiceState('idle');
       }
     }
+  }
+
+  const startVoiceNoteRecording = async () => {
+    try {
+      const permission = await requestRecordingPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert(
+          'Microphone Permission Required',
+          'Aranya needs microphone access to record voice messages.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
+      setIsRecordingVoiceNote(true);
+      setVoiceNoteDuration(0);
+      voiceNoteTimerRef.current = setInterval(() => {
+        setVoiceNoteDuration(p => p + 1);
+      }, 1000);
+
+      recorder.record();
+    } catch (err) {
+      console.error('Start voice note error:', err);
+    }
   };
+
+  const cancelVoiceNote = async () => {
+    if (voiceNoteTimerRef.current) {
+      clearInterval(voiceNoteTimerRef.current);
+      voiceNoteTimerRef.current = null;
+    }
+    setIsRecordingVoiceNote(false);
+    setVoiceNoteDuration(0);
+    if (recorder.isRecording) {
+      try {
+        await recorder.stop();
+      } catch (e) {
+        console.error('Error canceling recording:', e);
+      }
+    }
+  };
+
+  const sendVoiceNote = async () => {
+    if (voiceNoteTimerRef.current) {
+      clearInterval(voiceNoteTimerRef.current);
+      voiceNoteTimerRef.current = null;
+    }
+    
+    const duration = voiceNoteDuration;
+    setIsRecordingVoiceNote(false);
+    setVoiceNoteDuration(0);
+
+    if (recorder.isRecording) {
+      try {
+        await recorder.stop();
+        const uri = recorder.uri;
+        if (uri) {
+          const tempMsgId = Date.now().toString();
+          setMessages(prev => [...prev, {
+            id: tempMsgId,
+            text: '',
+            isSender: true,
+            isVoiceNote: true,
+            isTranscribing: true,
+            audio_uri: uri,
+            voiceDuration: duration,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'sent',
+          }]);
+          
+          await sendVoiceNoteToBackend(uri, tempMsgId);
+        }
+      } catch (e) {
+        console.error('Error sending voice note:', e);
+      }
+    }
+  };
+
+  const sendVoiceNoteToBackend = async (uri: string, tempMsgId: string) => {
+    setIsTyping(true);
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
+      const formData = new FormData();
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const audioBlob = await response.blob();
+        formData.append('audio', audioBlob, 'voice.webm');
+      } else {
+        formData.append('audio', {
+          uri: uri,
+          name: Platform.OS === 'android' ? 'voice.m4a' : 'voice.caf',
+          type: Platform.OS === 'android' ? 'audio/m4a' : 'audio/x-caf',
+        } as any);
+      }
+
+      formData.append('language', i18n.locale || 'hi');
+      formData.append('user_id', 'demo_user_123');
+
+      const response = await fetch(`${apiUrl}/api/voice-chat`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setMessages(prev => prev.map(m => m.id === tempMsgId ? { 
+          ...m, 
+          text: `Transcription failed: ${data.error}`,
+          isTranscribing: false 
+        } : m));
+        return;
+      }
+
+      const cleanTranscript = (data.transcript || '').replace(/['"]+/g, '').trim();
+      
+      if (cleanTranscript && cleanTranscript.toLowerCase() !== 'not found') {
+        setMessages(prev => prev.map(m => m.id === tempMsgId ? { 
+          ...m, 
+          text: cleanTranscript,
+          isTranscribing: false,
+          status: 'read' 
+        } : m));
+      } else {
+        setMessages(prev => prev.map(m => m.id === tempMsgId ? { 
+          ...m, 
+          text: "[Empty Voice Message]",
+          isTranscribing: false,
+          status: 'read' 
+        } : m));
+      }
+
+      if (data.reply) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          text: data.reply,
+          isSender: false,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          audio_base64: data.audio_base64 || undefined,
+          isVoiceNote: !!data.audio_base64,
+          voiceDuration: data.audio_base64 ? Math.ceil(data.reply.length / 15) : undefined,
+        }]);
+
+        if (data.audio_base64) {
+          try {
+            await playBase64Audio(data.audio_base64);
+          } catch (e) {
+            console.error('Background audio playback error:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Upload voice note error:', e);
+      setMessages(prev => prev.map(m => m.id === tempMsgId ? { 
+        ...m, 
+        text: 'Connection error. Upload failed.', 
+        isTranscribing: false 
+      } : m));
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
 
   const sendVoiceToBackend = async (uri: string) => {
     setVoiceState('processing');
@@ -563,6 +824,8 @@ export default function Dashboard() {
           isSender: false,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           audio_base64: data.audio_base64 || undefined,
+          isVoiceNote: !!data.audio_base64,
+          voiceDuration: data.audio_base64 ? Math.ceil(data.reply.length / 15) : undefined,
         }]);
       }
 
@@ -627,6 +890,9 @@ export default function Dashboard() {
           text: data.reply,
           isSender: false,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          audio_base64: data.audio_base64 || undefined,
+          isVoiceNote: !!data.audio_base64,
+          voiceDuration: data.audio_base64 ? Math.ceil(data.reply.length / 15) : undefined,
         }]);
 
         if (data.audio_base64) {
@@ -652,6 +918,7 @@ export default function Dashboard() {
   const toggleVoiceMode = () => {
     const newState = !voiceMode;
     setVoiceMode(newState);
+    setCallDuration(0);
     if (newState) {
       greetAndStart();
     } else {
@@ -660,7 +927,7 @@ export default function Dashboard() {
     }
   };
 
-  const exitVoiceMode = async () => {
+  async function exitVoiceMode() {
     if (recorder.isRecording) {
       try {
         await recorder.stop();
@@ -672,7 +939,8 @@ export default function Dashboard() {
     setIsVoiceMinimized(false);
     setVoiceState('idle');
     setVoiceTranscript('');
-  };
+    setCallDuration(0);
+  }
 
   // ═══════════════════════════════════════════════════════
   // VOICE MODE FULL-SCREEN (WhatsApp Style)
@@ -729,7 +997,7 @@ export default function Dashboard() {
 
             {voiceTranscript ? (
               <Animated.View entering={FadeIn} style={vs.transcriptBubble}>
-                <Text style={vs.transcriptText}>"{voiceTranscript}"</Text>
+                <Text style={vs.transcriptText}>{"\"" + voiceTranscript + "\""}</Text>
               </Animated.View>
             ) : null}
           </View>
@@ -830,6 +1098,7 @@ export default function Dashboard() {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Logout', style: 'destructive', onPress: async () => {
           try {
+            await logoutUser();
             await AsyncStorage.clear();
           } catch (e) {}
           router.replace('/sign-in');
@@ -941,34 +1210,67 @@ export default function Dashboard() {
                 {msg.image_base64 && (
                   <Image source={{ uri: msg.image_base64 }} style={cs.messageImage} contentFit="cover" />
                 )}
-                {!!msg.text && (
-                  <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
+                
+                {msg.isVoiceNote ? (
+                  <View style={cs.voiceMessageContainer}>
+                    <Pressable 
+                      style={cs.voicePlayButton} 
+                      onPress={() => playAudio({ uri: msg.audio_uri, base64: msg.audio_base64 }, msg.id)}
+                    >
+                      {playingId === msg.id ? (
+                        <Pause color={msg.isSender ? "#ffffff" : "#17c690"} size={16} />
+                      ) : (
+                        <Play color={msg.isSender ? "#ffffff" : "#4b5563"} size={16} style={{ marginLeft: 2 }} />
+                      )}
+                    </Pressable>
+                    
+                    <View style={cs.voiceContentColumn}>
+                      <View style={cs.voiceWaveformRow}>
+                        {msg.isTranscribing ? (
+                          <View style={cs.voiceLoadingRow}>
+                            <ActivityIndicator size="small" color={msg.isSender ? "#ffffff" : "#17c690"} style={{ marginRight: 6 }} />
+                            <Text style={[cs.voiceTranscribingText, msg.isSender && { color: '#ffedd5' }]}>Transcribing voice...</Text>
+                          </View>
+                        ) : (
+                          <View style={cs.voiceWaveform}>
+                            {[4, 10, 14, 8, 18, 12, 6, 10, 16, 12, 6, 14, 8, 10, 16, 12, 4].map((h, i) => (
+                              <View key={i} style={[
+                                cs.audioBar, 
+                                {
+                                  height: h,
+                                  backgroundColor: playingId === msg.id 
+                                    ? (msg.isSender ? '#ffedd5' : '#17c690') 
+                                    : (msg.isSender ? '#fde047' : '#9ca3af'),
+                                }
+                              ]} />
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                      
+                      <View style={cs.voiceSubRow}>
+                        <Text style={[cs.voiceDurationText, msg.isSender ? { color: '#ffedd5' } : { color: '#6b7280' }]}>
+                          {playingId === msg.id ? 'Playing' : msg.voiceDuration ? formatDuration(msg.voiceDuration) : '0:00'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  !!msg.text && (
+                    <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
+                  )
+                )}
+
+                {msg.isVoiceNote && !msg.isTranscribing && !!msg.text && (
+                  <View style={[cs.transcriptContainer, msg.isSender ? cs.senderTranscriptBg : cs.receivedTranscriptBg]}>
+                    <Text style={[cs.transcriptHeaderLabel, msg.isSender ? { color: '#ffedd5' } : { color: '#17c690' }]}>Transcript</Text>
+                    <Text style={msg.isSender ? cs.sentText : cs.receivedText}>{msg.text}</Text>
+                  </View>
                 )}
                 {msg.hasCallAction && (
                   <Pressable style={cs.callActionButton} onPress={toggleVoiceMode}>
                     <Phone color="#10b981" size={16} />
                     <Text style={cs.callActionText}>Start Voice Chat</Text>
-                  </Pressable>
-                )}
-                {/* Inline audio player */}
-                {msg.audio_base64 && !msg.isSender && (
-                  <Pressable style={cs.audioButton} onPress={() => playAudio(msg.audio_base64!, msg.id)}>
-                    {playingId === msg.id ? (
-                      <Pause color="#17c690" size={14} />
-                    ) : (
-                      <Play color="#6b7280" size={14} />
-                    )}
-                    <View style={cs.audioWaveform}>
-                      {[4, 8, 12, 8, 14, 6, 10, 12, 6, 8, 14, 10, 6].map((h, i) => (
-                        <View key={i} style={[cs.audioBar, {
-                          height: h,
-                          backgroundColor: playingId === msg.id ? '#17c690' : '#9ca3af',
-                        }]} />
-                      ))}
-                    </View>
-                    <Text style={[cs.audioLabel, playingId === msg.id && { color: '#17c690' }]}>
-                      {playingId === msg.id ? 'Playing' : '0:00'}
-                    </Text>
                   </Pressable>
                 )}
                 <View style={cs.messageFooter}>
@@ -1003,22 +1305,38 @@ export default function Dashboard() {
 
         {/* Input */}
         <View style={cs.inputArea}>
-          <View style={cs.inputContainer}>
-            <TextInput style={cs.textInput} placeholder="Message Aranya..." placeholderTextColor="#6b7280"
-              value={inputText} onChangeText={setInputText} onSubmitEditing={handleSend} />
-            <Pressable style={cs.iconButton} onPress={() => pickImage(false)}>
-              <Paperclip color="#4b5563" size={20} />
+          {isRecordingVoiceNote ? (
+            <Animated.View entering={FadeIn} style={cs.recordingContainer}>
+              <View style={cs.recordingInfo}>
+                <Animated.View style={[cs.redDot, redDotStyle]} />
+                <Text style={cs.recordingText}>Recording {formatDuration(voiceNoteDuration)}</Text>
+              </View>
+              <Pressable style={cs.cancelVoiceNoteBtn} onPress={cancelVoiceNote}>
+                <Text style={cs.cancelVoiceNoteText}>Cancel</Text>
+              </Pressable>
+            </Animated.View>
+          ) : (
+            <View style={cs.inputContainer}>
+              <TextInput style={cs.textInput} placeholder="Message Aranya..." placeholderTextColor="#6b7280"
+                value={inputText} onChangeText={setInputText} onSubmitEditing={handleSend} />
+              <Pressable style={cs.iconButton} onPress={() => pickImage(false)}>
+                <Paperclip color="#4b5563" size={20} />
+              </Pressable>
+              <Pressable style={cs.iconButton} onPress={() => setCameraModalVisible(true)}>
+                <CameraIcon color="#4b5563" size={20} />
+              </Pressable>
+            </View>
+          )}
+          {isRecordingVoiceNote ? (
+            <Pressable style={cs.sendButton} onPress={sendVoiceNote}>
+              <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
             </Pressable>
-            <Pressable style={cs.iconButton} onPress={() => setCameraModalVisible(true)}>
-              <CameraIcon color="#4b5563" size={20} />
-            </Pressable>
-          </View>
-          {inputText.trim().length > 0 || selectedImage ? (
+          ) : inputText.trim().length > 0 || selectedImage ? (
             <Pressable style={cs.sendButton} onPress={handleSend}>
               <Send color="#ffffff" size={20} style={{ marginLeft: -2, marginTop: 2 }} />
             </Pressable>
           ) : (
-            <Pressable style={cs.sendButton} onPress={toggleVoiceMode}>
+            <Pressable style={cs.sendButton} onPress={startVoiceNoteRecording}>
               <Mic color="#ffffff" size={24} />
             </Pressable>
           )}
@@ -1390,5 +1708,85 @@ const cs = StyleSheet.create({
     width: 48, height: 48, borderRadius: 24, backgroundColor: '#17c690',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#17c690', shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 4,
+  },
+  // Inline recording container
+  recordingContainer: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fee2e2', borderRadius: 24, paddingHorizontal: 16, minHeight: 48,
+    marginRight: 12, borderWidth: 1, borderColor: '#fecaca',
+  },
+  recordingInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  redDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444' },
+  recordingText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#dc2626' },
+  cancelVoiceNoteBtn: { padding: 6 },
+  cancelVoiceNoteText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#9ca3af' },
+  // Unified Voice Message Bubble Styles
+  voiceMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    gap: 12,
+    minWidth: 200,
+  },
+  voicePlayButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceContentColumn: {
+    flex: 1,
+    gap: 4,
+  },
+  voiceWaveformRow: {
+    height: 24,
+    justifyContent: 'center',
+  },
+  voiceLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  voiceTranscribingText: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  voiceWaveform: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  voiceSubRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voiceDurationText: {
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+  },
+  transcriptContainer: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  senderTranscriptBg: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  receivedTranscriptBg: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+  },
+  transcriptHeaderLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

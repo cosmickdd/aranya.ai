@@ -32,7 +32,7 @@ export default function Onboarding() {
   const { width } = useWindowDimensions();
   const isDesktop = width > 768;
 
-  const buttonScale = useSharedValue(1);
+  const buttonScaleRef = React.useRef(useSharedValue(1));
 
   const handleNext = () => {
     if (step < ONBOARDING_STEPS.length - 1) {
@@ -43,8 +43,12 @@ export default function Onboarding() {
   };
 
   const animatedButton = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
+    transform: [{ scale: buttonScaleRef.current.value }],
   }));
+
+  const pressButton = (isPressed: boolean) => {
+    buttonScaleRef.current.value = withSpring(isPressed ? 0.95 : 1);
+  };
 
   const currentStep = ONBOARDING_STEPS[step];
   
@@ -91,8 +95,8 @@ export default function Onboarding() {
 
             <Pressable 
               style={styles.buttonWrapper}
-              onPressIn={() => (buttonScale.value = withSpring(0.95))}
-              onPressOut={() => (buttonScale.value = withSpring(1))}
+              onPressIn={() => pressButton(true)}
+              onPressOut={() => pressButton(false)}
               onPress={handleNext}
             >
               <Animated.View style={[styles.button, animatedButton]}>
