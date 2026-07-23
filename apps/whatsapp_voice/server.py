@@ -357,10 +357,10 @@ def api_voice_chat():
         from services.sarvam import speech_to_text, translate_text, text_to_speech
         from core.engine import generate_response
 
-        # Step 1: Sarvam STT — transcribe audio to text in user's language
+        # Step 1: Speech-to-Text (handles webm transcoding automatically)
         transcript = speech_to_text(audio_bytes, language=language, mime_type=mime_type, api_key=api_key)
         if not transcript:
-            return jsonify({"error": "Could not understand audio. Please try again."}), 400
+            return jsonify({"error": f"Could not understand audio. (WAV size: {len(audio_bytes)} bytes). Please speak clearly or check microphone."}), 400
         logger.info(f"STT transcript: {transcript}")
 
         # Step 2: Gemini AI response directly in target language (bypassing input translation)
