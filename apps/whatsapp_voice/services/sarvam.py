@@ -224,6 +224,29 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
         resp.raise_for_status()
         result = resp.json()
         transcript = result.get("transcript", "")
+        
+        # If saarika:v2.5 returned empty transcript, try saaras:v3 fallback
+        if not transcript or not transcript.strip():
+            logger.info("saarika:v2.5 returned empty transcript, attempting saaras:v3 fallback...")
+            files_fallback = {
+                "file": (f"audio.{ext}", io.BytesIO(audio_bytes), mime_type),
+            }
+            data_fallback = {
+                "model": "saaras:v3",
+                "with_timestamps": "false",
+            }
+            resp_fallback = requests.post(
+                f"{SARVAM_BASE}/speech-to-text",
+                headers=headers,
+                files=files_fallback,
+                data=data_fallback,
+                timeout=30,
+            )
+            if resp_fallback.status_code == 200:
+                res_fb = resp_fallback.json()
+                transcript = res_fb.get("transcript", "")
+                logger.info(f"saaras:v3 fallback transcript: {transcript[:80]}")
+
         logger.info(f"Sarvam STT OK: {lang_code}, transcript: {transcript[:80]}...")
         return transcript
     except Exception as e:
