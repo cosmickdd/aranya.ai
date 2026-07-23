@@ -1632,31 +1632,6 @@ export default function Dashboard() {
         )}
 
 
-              <Pressable 
-                style={cs.suggestionChip}
-                onPress={() => {
-                  setInputText("My crops are sick. How do I diagnose and cure them?");
-                  setTimeout(() => handleSend(), 50);
-                }}
-              >
-                <Text style={cs.suggestionChipEmoji}>🐛</Text>
-                <Text style={cs.suggestionChipText}>Crop Disease Diagnosis</Text>
-              </Pressable>
-
-              <Pressable 
-                style={cs.suggestionChip}
-                onPress={() => {
-                  setInputText("What government schemes are available for Indian farmers?");
-                  setTimeout(() => handleSend(), 50);
-                }}
-              >
-                <Text style={cs.suggestionChipEmoji}>📜</Text>
-                <Text style={cs.suggestionChipText}>Govt Schemes</Text>
-              </Pressable>
-            </ScrollView>
-          </Animated.View>
-        )}
-
         {/* Input */}
         <View style={cs.inputArea}>
           {isRecordingVoiceNote ? (
