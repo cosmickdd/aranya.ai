@@ -186,7 +186,7 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
         }
         data = {
             "language_code": lang_code,
-            "model": "saaras:v2",
+            "model": "saaras:v3",
             "with_timestamps": "false",
         }
         headers = {
@@ -199,11 +199,15 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
             data=data,
             timeout=30,
         )
+        if resp.status_code != 200:
+            logger.error(f"Sarvam STT error body: {resp.text}")
         resp.raise_for_status()
         result = resp.json()
         transcript = result.get("transcript", "")
         logger.info(f"Sarvam STT OK: {lang_code}, transcript: {transcript[:80]}...")
         return transcript
     except Exception as e:
+        if 'resp' in locals() and hasattr(resp, 'text'):
+            logger.error(f"Sarvam STT exception response: {resp.text}")
         logger.error(f"Sarvam STT error: {e}")
         return ""
