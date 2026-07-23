@@ -1572,6 +1572,58 @@ export default function Dashboard() {
           </View>
         )}
 
+        {/* Quick Suggestion Chips */}
+        {!isRecordingVoiceNote && !selectedImage && !selectedDoc && (
+          <Animated.View entering={FadeInDown.duration(400)} style={cs.suggestionsWrapper}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cs.suggestionsScroll}>
+              <Pressable 
+                style={cs.suggestionChip} 
+                onPress={() => {
+                  setInputText("How is the weather in my village today?");
+                  // Auto-submit after selection
+                  setTimeout(() => handleSend(), 50);
+                }}
+              >
+                <Text style={cs.suggestionChipEmoji}>🌦️</Text>
+                <Text style={cs.suggestionChipText}>Weather Forecast</Text>
+              </Pressable>
+
+              <Pressable 
+                style={cs.suggestionChip}
+                onPress={() => {
+                  setInputText("Show me the current market mandi prices.");
+                  setTimeout(() => handleSend(), 50);
+                }}
+              >
+                <Text style={cs.suggestionChipEmoji}>🌾</Text>
+                <Text style={cs.suggestionChipText}>Mandi Prices</Text>
+              </Pressable>
+
+              <Pressable 
+                style={cs.suggestionChip}
+                onPress={() => {
+                  setInputText("My crops are sick. How do I diagnose and cure them?");
+                  setTimeout(() => handleSend(), 50);
+                }}
+              >
+                <Text style={cs.suggestionChipEmoji}>🐛</Text>
+                <Text style={cs.suggestionChipText}>Crop Disease Diagnosis</Text>
+              </Pressable>
+
+              <Pressable 
+                style={cs.suggestionChip}
+                onPress={() => {
+                  setInputText("What government schemes are available for Indian farmers?");
+                  setTimeout(() => handleSend(), 50);
+                }}
+              >
+                <Text style={cs.suggestionChipEmoji}>📜</Text>
+                <Text style={cs.suggestionChipText}>Govt Schemes</Text>
+              </Pressable>
+            </ScrollView>
+          </Animated.View>
+        )}
+
         {/* Input */}
         <View style={cs.inputArea}>
           {isRecordingVoiceNote ? (
@@ -2130,5 +2182,40 @@ const cs = StyleSheet.create({
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  // Suggestions accessory bar
+  suggestionsWrapper: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    paddingVertical: 12,
+  },
+  suggestionsScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  suggestionChipEmoji: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  suggestionChipText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: '#374151',
   },
 });

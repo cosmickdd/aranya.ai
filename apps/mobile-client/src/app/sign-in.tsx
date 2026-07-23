@@ -328,20 +328,7 @@ export default function SignIn() {
                 </Animated.View>
               )}
 
-              {!isNativeAuthAvailable && (
-                <Animated.View entering={FadeInUp.delay(480).duration(600).springify()}>
-                  <Pressable 
-                    onPressIn={() => pressButton(true)}
-                    onPressOut={() => pressButton(false)}
-                    style={[styles.primaryButton, { backgroundColor: '#17c690', marginTop: 12 }]}
-                    onPress={() => router.replace('/dashboard')}
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      Continue as Guest (Dev Bypass)
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-              )}
+
 
               <Animated.View entering={FadeInUp.delay(500).duration(600).springify()}>
                 <Pressable style={styles.footerLink} onPress={() => router.push('/sign-up')} disabled={isLoading}>
