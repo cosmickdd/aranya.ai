@@ -148,8 +148,30 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
     lang_code = LANG_MAP.get(language, "hi-IN")
 
     try:
-        # Sarvam STT uses multipart/form-data
         import io
+        import subprocess
+
+        # If input is webm, convert it to wav using ffmpeg (which is pre-installed)
+        if "webm" in mime_type or mime_type == "audio/webm":
+            logger.info("Converting webm audio to wav format using ffmpeg...")
+            try:
+                # Use subprocess to run ffmpeg reading from stdin and writing to stdout
+                process = subprocess.Popen(
+                    ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "-ar", "16000", "-ac", "1", "pipe:1"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                converted_bytes, stderr = process.communicate(input=audio_bytes)
+                if process.returncode == 0 and len(converted_bytes) > 0:
+                    audio_bytes = converted_bytes
+                    mime_type = "audio/wav"
+                    logger.info(f"Transcoding successful: converted to WAV ({len(audio_bytes)} bytes)")
+                else:
+                    logger.error(f"ffmpeg conversion failed: {stderr.decode('utf-8', errors='ignore')}")
+            except Exception as ffmpeg_err:
+                logger.error(f"Failed to transcode webm using ffmpeg: {ffmpeg_err}")
+
         if "webm" in mime_type:
             ext = "webm"
         elif "m4a" in mime_type or "mp4" in mime_type:
