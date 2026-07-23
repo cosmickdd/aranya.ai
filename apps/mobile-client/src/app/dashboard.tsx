@@ -266,7 +266,8 @@ export default function Dashboard() {
     const metering = recorderState.metering ?? -160;
     const now = Date.now();
     
-    if (metering > -48) {
+    // Extremely sensitive volume threshold (-85dB instead of -48dB) to handle emulators/quiet devices
+    if (metering > -85) {
       silenceStartRef.current = now;
       if (!hasSpokenRef.current) {
         hasSpokenRef.current = true;
@@ -280,7 +281,7 @@ export default function Dashboard() {
         !isRecordingVoiceNote &&
         hasSpokenRef.current &&
         silenceStartRef.current > 0 &&
-        (now - silenceStartRef.current > 1800) &&
+        (now - silenceStartRef.current > 2000) &&
         voiceStateRef.current === 'listening'
       ) {
         stopRecording();
@@ -289,11 +290,20 @@ export default function Dashboard() {
   }, [recorderState.metering, recorderState.isRecording, isRecordingVoiceNote]);
 
   const handleSilenceTimeout = useCallback(async () => {
-    if (voiceStateRef.current !== 'listening' || hasSpokenRef.current) return;
+    if (voiceStateRef.current !== 'listening') return;
     
     try {
       if (recorderState.isRecording) {
         await recorder.stop();
+        const uri = recorder.uri;
+        
+        // Force send the audio anyway if there is a URI (bypass VAD silence check on timeout)
+        if (uri) {
+          hasSpokenRef.current = true; // force spoken flag
+          setVoiceState('processing');
+          await sendVoiceToBackend(uri);
+          return;
+        }
       }
     } catch (_) {}
     
@@ -780,12 +790,10 @@ export default function Dashboard() {
       try {
         await recorder.stop();
         const uri = recorder.uri;
-        
-        if (!hasSpokenRef.current || !uri) {
+        if (!uri) {
           setVoiceState('idle');
           return;
         }
-        
         await sendVoiceToBackend(uri);
       } catch (err) {
         console.error('Stop recording error:', err);
