@@ -79,9 +79,31 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db():
-    """Create all tables if they don't already exist."""
+    """Create all tables if they don't already exist and ensure columns match model schema."""
     try:
         Base.metadata.create_all(bind=engine)
+        
+        # Self-healing migration for existing databases (adds missing User fields)
+        columns_to_check = {
+            "first_name": "VARCHAR",
+            "language": "VARCHAR DEFAULT 'hi'",
+            "location": "VARCHAR",
+            "crops": "VARCHAR"
+        }
+        
+        with engine.connect() as conn:
+            for col_name, col_type in columns_to_check.items():
+                try:
+                    # Test if column exists by attempting to select it
+                    conn.execute(text(f"SELECT {col_name} FROM users LIMIT 1"))
+                except Exception:
+                    # Column is missing, add it
+                    try:
+                        conn.rollback()  # Clear transaction error state
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                        conn.commit()
+                    except Exception:
+                        pass
     except OperationalError as exc:
         msg = str(exc).lower()
         if "already exists" in msg:
