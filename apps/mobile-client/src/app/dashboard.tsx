@@ -1435,13 +1435,8 @@ export default function Dashboard() {
           </View>
         </Modal>
 
-        {/* Chat Area with Repeating Agri-Pattern */}
-        <ImageBackground 
-          source={require('../../assets/images/bg.png')} 
-          style={cs.chatArea} 
-          resizeMode="repeat"
-          imageStyle={{ opacity: 0.05, tintColor: '#0b3b24' }}
-        >
+        {/* Chat Area with Premium Warm-Sand Background */}
+        <View style={cs.chatArea}>
           <ScrollView ref={scrollViewRef} contentContainerStyle={cs.chatContent}
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
             <View style={cs.dateBadgeContainer}>
@@ -1540,6 +1535,65 @@ export default function Dashboard() {
               </Animated.View>
             ))}
 
+            {/* Centered Dashboard Helper Cards (Only when chat has only the welcome message) */}
+            {messages.length <= 1 && (
+              <Animated.View entering={FadeInDown.delay(200).duration(500)} style={cs.suggestionsGrid}>
+                <Text style={cs.suggestionsHeader}>Quick Prompts</Text>
+                
+                <View style={cs.suggestionsRow}>
+                  <Pressable 
+                    style={cs.suggestionGridCard} 
+                    onPress={() => {
+                      setInputText("How is the weather in my village today?");
+                      setTimeout(() => handleSend(), 50);
+                    }}
+                  >
+                    <Text style={cs.cardIcon}>🌦️</Text>
+                    <Text style={cs.cardTitle}>Weather</Text>
+                    <Text style={cs.cardSubtitle}>Get local forecast & rain alerts</Text>
+                  </Pressable>
+
+                  <Pressable 
+                    style={cs.suggestionGridCard}
+                    onPress={() => {
+                      setInputText("Show me the current market mandi prices.");
+                      setTimeout(() => handleSend(), 50);
+                    }}
+                  >
+                    <Text style={cs.cardIcon}>🌾</Text>
+                    <Text style={cs.cardTitle}>Mandi Prices</Text>
+                    <Text style={cs.cardSubtitle}>Check latest crop market rates</Text>
+                  </Pressable>
+                </View>
+
+                <View style={cs.suggestionsRow}>
+                  <Pressable 
+                    style={cs.suggestionGridCard}
+                    onPress={() => {
+                      setInputText("My crops are sick. How do I diagnose and cure them?");
+                      setTimeout(() => handleSend(), 50);
+                    }}
+                  >
+                    <Text style={cs.cardIcon}>🐛</Text>
+                    <Text style={cs.cardTitle}>Crop Care</Text>
+                    <Text style={cs.cardSubtitle}>Diagnose pests and diseases</Text>
+                  </Pressable>
+
+                  <Pressable 
+                    style={cs.suggestionGridCard}
+                    onPress={() => {
+                      setInputText("What government schemes are available for Indian farmers?");
+                      setTimeout(() => handleSend(), 50);
+                    }}
+                  >
+                    <Text style={cs.cardIcon}>📜</Text>
+                    <Text style={cs.cardTitle}>Schemes</Text>
+                    <Text style={cs.cardSubtitle}>Find PM-Kisan & insurance info</Text>
+                  </Pressable>
+                </View>
+              </Animated.View>
+            )}
+
             {isTyping && (
               <Animated.View entering={FadeIn} style={[cs.messageBubble, cs.receivedBubble, { paddingVertical: 16 }]}>
                 <View style={cs.typingDots}>
@@ -1550,7 +1604,7 @@ export default function Dashboard() {
               </Animated.View>
             )}
           </ScrollView>
-        </ImageBackground>
+        </View>
 
         {/* Image Preview */}
         {selectedImage && (
@@ -1577,32 +1631,6 @@ export default function Dashboard() {
           </View>
         )}
 
-        {/* Quick Suggestion Chips */}
-        {!isRecordingVoiceNote && !selectedImage && !selectedDoc && (
-          <Animated.View entering={FadeInDown.duration(400)} style={cs.suggestionsWrapper}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cs.suggestionsScroll}>
-              <Pressable 
-                style={cs.suggestionChip} 
-                onPress={() => {
-                  setInputText("How is the weather in my village today?");
-                  // Auto-submit after selection
-                  setTimeout(() => handleSend(), 50);
-                }}
-              >
-                <Text style={cs.suggestionChipEmoji}>🌦️</Text>
-                <Text style={cs.suggestionChipText}>Weather Forecast</Text>
-              </Pressable>
-
-              <Pressable 
-                style={cs.suggestionChip}
-                onPress={() => {
-                  setInputText("Show me the current market mandi prices.");
-                  setTimeout(() => handleSend(), 50);
-                }}
-              >
-                <Text style={cs.suggestionChipEmoji}>🌾</Text>
-                <Text style={cs.suggestionChipText}>Mandi Prices</Text>
-              </Pressable>
 
               <Pressable 
                 style={cs.suggestionChip}
@@ -2037,7 +2065,7 @@ const cs = StyleSheet.create({
     flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#fc865a', alignItems: 'center',
   },
   reportSubmitText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
-  chatArea: { flex: 1, backgroundColor: '#f4f6f4' },
+  chatArea: { flex: 1, backgroundColor: '#FAF8F5' },
   chatContent: { padding: 16, paddingBottom: 24 },
   dateBadgeContainer: { alignItems: 'center', marginVertical: 16 },
   dateBadge: {
@@ -2188,39 +2216,59 @@ const cs = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  // Suggestions accessory bar
-  suggestionsWrapper: {
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    paddingVertical: 12,
+  // Suggestions card grid (renders in scroll history when empty)
+  suggestionsGrid: {
+    padding: 16,
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
+    marginTop: 20,
   },
-  suggestionsScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
+  suggestionsHeader: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#0b3b24',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    textAlign: 'center',
   },
-  suggestionChip: {
+  suggestionsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderWidth: 1,
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  suggestionGridCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
     borderColor: '#e5e7eb',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#0b3b24',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  suggestionChipEmoji: {
-    fontSize: 14,
-    marginRight: 6,
+  cardIcon: {
+    fontSize: 24,
+    marginBottom: 8,
   },
-  suggestionChipText: {
+  cardTitle: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: '#374151',
+    fontSize: 14,
+    color: '#111827',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  cardSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 15,
   },
 });
