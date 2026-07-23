@@ -266,8 +266,8 @@ export default function Dashboard() {
     const metering = recorderState.metering ?? -160;
     const now = Date.now();
     
-    // Extremely sensitive volume threshold (-85dB instead of -48dB) to handle emulators/quiet devices
-    if (metering > -85) {
+    // Stable volume threshold (-48dB) to handle background noise floor properly
+    if (metering > -48) {
       silenceStartRef.current = now;
       if (!hasSpokenRef.current) {
         hasSpokenRef.current = true;
