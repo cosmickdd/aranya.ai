@@ -153,6 +153,36 @@ def _get_history(db, user_id: int, limit: int = 12):
     return list(reversed(rows))
 
 
+def _build_farmer_context(user: User) -> str:
+    """
+    Build a brief profile block prepended to the system prompt.
+    When the farmer has completed onboarding, Aranya can greet them by name,
+    use their location as the default for weather queries, and reference their
+    actual crops rather than asking every time.
+    """
+    parts = []
+    if user.first_name:
+        parts.append(f"Farmer's name: {user.first_name}")
+    if user.location:
+        parts.append(f"Location: {user.location}")
+    if user.crops:
+        parts.append(f"Crops they grow: {user.crops}")
+    if user.language:
+        lang_labels = {
+            'en': 'English', 'hi': 'Hindi', 'ta': 'Tamil', 'te': 'Telugu',
+            'mr': 'Marathi', 'bn': 'Bengali', 'gu': 'Gujarati',
+            'kn': 'Kannada', 'pa': 'Punjabi', 'ks': 'Kashmiri'
+        }
+        parts.append(f"Preferred language: {lang_labels.get(user.language, 'Hindi')}")
+    if not parts:
+        return ""
+    return (
+        "=== FARMER PROFILE (use this to personalise your response) ===\n"
+        + "\n".join(parts)
+        + "\n=== END PROFILE ==="
+    )
+
+
 def _save(db, user_id: int, role: str, content: str, msg_type: str = "text"):
     db.add(Message(user_id=user_id, role=role, content=content, msg_type=msg_type))
     db.commit()
@@ -221,6 +251,11 @@ def generate_response(
         contents.append(types.Content(role="user", parts=current_parts))
 
         system = ARANYA_SOUL
+
+        # Prepend farmer profile so Aranya personalises greetings and advice
+        farmer_ctx = _build_farmer_context(user)
+        if farmer_ctx:
+            system = farmer_ctx + "\n\n" + system
         
         if language:
             language_map = {

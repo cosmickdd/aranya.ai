@@ -59,6 +59,9 @@ def handle_whatsapp_message():
     media_type   = request.form.get("MediaContentType0", "")
     profile_name = request.form.get("ProfileName", "")
 
+    # Initialise message state
+    msg_type = "text"
+
     # Normalise phone ID (strip whatsapp: prefix for DB storage)
     phone_id = from_number.replace("whatsapp:", "").strip()
 
@@ -131,6 +134,6 @@ def handle_whatsapp_message():
         phone_id=phone_id,
         user_text=body,
         name=profile_name,
-        msg_type=msg_type if "msg_type" in dir() else "text",
+        msg_type=msg_type,
     )
     _send_whatsapp(phone_id, ai_reply)

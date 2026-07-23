@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInUp, FadeInRight, withSpring, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Check, Globe2 } from 'lucide-react-native';
 import i18n from '../lib/i18n';
@@ -27,6 +28,16 @@ export default function LanguageSelection() {
   const [selectedLang, setSelectedLang] = useState(i18n.locale.includes('hi') ? 'hi' : 'en');
   const buttonScaleRef = React.useRef(useSharedValue(1));
 
+  // Restore persisted language on mount
+  useEffect(() => {
+    AsyncStorage.getItem('aranya_language').then((saved) => {
+      if (saved) {
+        setSelectedLang(saved);
+        i18n.locale = saved;
+      }
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     i18n.locale = selectedLang;
   }, [selectedLang]);
@@ -39,8 +50,24 @@ export default function LanguageSelection() {
     buttonScaleRef.current.value = withSpring(isPressed ? 0.95 : 1);
   };
 
-  const handleContinue = () => {
-    // After selecting language, go to onboarding slides
+  const handleContinue = async () => {
+    // Persist language to AsyncStorage
+    try {
+      await AsyncStorage.setItem('aranya_language', selectedLang);
+    } catch (e) {
+      console.warn('Failed to persist language:', e);
+    }
+
+    // Persist language to backend DB (best-effort, non-blocking)
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (apiUrl) {
+      fetch(`${apiUrl}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: 'anonymous_mobile_user', language: selectedLang }),
+      }).catch(() => {}); // fire and forget
+    }
+
     router.push('/onboarding');
   };
 

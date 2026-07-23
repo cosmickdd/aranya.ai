@@ -80,11 +80,13 @@ def detect_intent(text: str) -> dict:
     # ── Check mandi intent
     wants_mandi = any(kw in text_lower for kw in MANDI_KEYWORDS)
     commodity = None
-    if wants_mandi or True:  # also scan even without mandi keyword
+    # Only scan for commodity when a price/market keyword is present.
+    # Avoids injecting mandi prices into disease-diagnosis queries that
+    # happen to mention a crop name (e.g. "meri gehun fasal bimar hai").
+    if wants_mandi:
         for name, pattern in COMMODITY_PATTERNS.items():
             if re.search(pattern, text_lower):
                 commodity = name
-                wants_mandi = True
                 break
 
     # ── Check weather intent

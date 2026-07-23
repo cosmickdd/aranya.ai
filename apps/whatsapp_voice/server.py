@@ -8,7 +8,10 @@ Routes:
   POST /voice/status          <- Twilio call status callback
   GET  /voice/play-message    <- TwiML for outbound alert calls
   GET  /audio/<filename>      <- Serves TTS audio files to Twilio
-  GET  /health                <- Health check
+  GET  /health                <- Health check (also tests DB connectivity)
+  POST /api/chat              <- Mobile app chat (rate-limited: 30/min)
+  POST /api/voice-chat        <- Mobile app voice chat (rate-limited: 20/min)
+  POST /api/profile           <- Save farmer profile (language, location, crops)
 
 Run in production:
   waitress-serve --host=0.0.0.0 --port=5000 server:app
@@ -60,6 +63,16 @@ logging.getLogger("werkzeug").setLevel(logging.WARNING)
 # ── Flask app ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max upload
+
+# ── Rate limiting (protects /api/* from bill abuse) ───────────────────────────
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[],          # no global limit; only per-route
+    storage_uri="memory://",
+)
 
 # ── Twilio signature validator ────────────────────────────────────────────────
 _validator = RequestValidator(TWILIO_AUTH_TOKEN) if TWILIO_AUTH_TOKEN else None
@@ -175,22 +188,30 @@ def serve_audio(filename):
 
 @app.route("/health")
 def health():
-    """Health check — used by load balancers and monitoring."""
-    return jsonify({
-        "status": "ok",
+    """
+    Health check — tests live DB connectivity in addition to server uptime.
+    Returns HTTP 200 if healthy, 503 if DB is unreachable.
+    """
+    from db.database import ping_db
+    db_ok = ping_db()
+    payload = {
+        "status": "ok" if db_ok else "degraded",
         "service": "Aranya.ai WhatsApp+Voice",
-        "version": "1.0.0",
+        "version": "0.2.0",
+        "db": "ok" if db_ok else "error",
         "timestamp": datetime.utcnow().isoformat() + "Z",
-    })
+    }
+    return jsonify(payload), (200 if db_ok else 503)
 
 
 @app.route("/")
 def index():
     return jsonify({
         "name": "Aranya.ai",
+        "version": "0.2.0",
         "description": "AI-powered agricultural companion for Indian farmers",
         "status": "running",
-        "endpoints": ["/health", "/whatsapp", "/voice/incoming"],
+        "endpoints": ["/health", "/whatsapp", "/voice/incoming", "/api/chat", "/api/voice-chat", "/api/profile"],
     })
 
 
@@ -226,6 +247,7 @@ def test_call():
 
 
 @app.route("/api/chat", methods=["POST", "OPTIONS"])
+@limiter.limit("30 per minute", methods=["POST"])
 def api_chat():
     """
     REST endpoint for the mobile app chat interface.
@@ -317,6 +339,7 @@ def api_chat():
 
 
 @app.route("/api/voice-chat", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute", methods=["POST"])
 def api_voice_chat():
     """
     Voice chat endpoint — accepts audio file from mic recording.
@@ -381,10 +404,63 @@ def api_voice_chat():
         logger.error(f"/api/voice-chat error: {e}")
         return jsonify({"error": "Voice processing failed"}), 500
 
+@app.route("/api/profile", methods=["POST", "OPTIONS"])
+def api_profile():
+    """
+    Save or update the farmer's profile — language, location, and crops.
+    Called by the mobile app after onboarding or language selection.
+
+    POST /api/profile  JSON:
+    {
+      "user_id": "firebase_uid_or_anonymous",
+      "language": "hi",           # optional ISO code
+      "location": "Varanasi",     # optional city/district
+      "crops": "Wheat, Onion"     # optional comma-separated crop list
+    }
+    Returns: {"success": true, "updated": ["language", "location", "crops"]}
+    """
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    data = request.get_json() or {}
+    user_id = data.get("user_id", "").strip()
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    from db.database import get_session, User
+    db = get_session()
+    try:
+        user = db.query(User).filter(User.telegram_id == user_id).first()
+        if not user:
+            # Create user row if first visit from mobile
+            user = User(telegram_id=user_id)
+            db.add(user)
+
+        updated = []
+        if "language" in data and data["language"]:
+            user.language = data["language"]
+            updated.append("language")
+        if "location" in data and data["location"]:
+            user.location = data["location"]
+            updated.append("location")
+        if "crops" in data and data["crops"]:
+            user.crops = data["crops"]
+            updated.append("crops")
+
+        db.commit()
+        logger.info(f"Profile updated for {user_id}: {updated}")
+        return jsonify({"success": True, "updated": updated})
+    except Exception as e:
+        logger.error(f"/api/profile error: {e}")
+        return jsonify({"error": "Profile update failed"}), 500
+    finally:
+        db.close()
+
+
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Test-Secret'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Test-Secret,X-Sarvam-API-Key'
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 

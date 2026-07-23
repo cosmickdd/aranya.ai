@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "969259104757",
+    "project_id": "aranya-d4d64",
+    "storage_bucket": "aranya-d4d64.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:969259104757:android:f5136b8ce9a24589cc48bc",
+        "android_client_info": {
+          "package_name": "com.aranya.ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "969259104757-8qld01i3s6tukddqju00l79p3ssrflkm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA14GDb-6E_RhUDYgj9cBRklPvkgzMKwrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "969259104757-8qld01i3s6tukddqju00l79p3ssrflkm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

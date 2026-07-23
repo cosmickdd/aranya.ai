@@ -1,10 +1,16 @@
 """
-db/database.py — Self-contained SQLite database for the WhatsApp+Voice service.
-Shares the SAME .db file as the Telegram MVP so all channels have unified memory.
+db/database.py — Database layer for Aranya.ai.
+
+Supports two backends:
+  • SQLite  (default/dev) — shared with the Telegram MVP via a single .db file
+  • PostgreSQL (prod)     — set DATABASE_URL=postgresql://user:pass@host/db
+
+No callers need to change: `get_session()` and all ORM models stay the same.
+The only requirement for PostgreSQL is `psycopg2-binary` in requirements.txt.
 """
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.exc import OperationalError
 
@@ -15,7 +21,7 @@ class User(Base):
     __tablename__ = "users"
 
     id          = Column(Integer, primary_key=True, autoincrement=True)
-    telegram_id = Column(String, unique=True, nullable=False, index=True)   # reused as phone_id
+    telegram_id = Column(String, unique=True, nullable=False, index=True)   # reused as phone_id / firebase uid
     first_name  = Column(String, nullable=True)
     language    = Column(String, default="hi")
     location    = Column(String, nullable=True)
@@ -39,13 +45,41 @@ class Message(Base):
     user = relationship("User", back_populates="messages")
 
 
-# Point to the SAME db file the Telegram MVP uses (repo root)
-_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "aranya_mvp.db"))
-engine      = create_engine(f"sqlite:///{_REPO_ROOT}", connect_args={"check_same_thread": False})
+# ── Engine selection ──────────────────────────────────────────────────────────
+def _build_engine():
+    database_url = os.getenv("DATABASE_URL", "")
+
+    if database_url:
+        # Production: PostgreSQL (or any SQLAlchemy-compatible URL).
+        # Heroku/Render prefix "postgres://" → SQLAlchemy needs "postgresql://".
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        return create_engine(
+            database_url,
+            pool_pre_ping=True,   # avoids stale connection errors on Postgres
+            pool_size=5,
+            max_overflow=10,
+        )
+    else:
+        # Development / single-process: shared SQLite file.
+        # Placed at repo root so both whatsapp_voice and mvp use the same file.
+        repo_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data")
+        )
+        os.makedirs(repo_root, exist_ok=True)
+        sqlite_path = os.path.join(repo_root, "aranya_mvp.db")
+        return create_engine(
+            f"sqlite:///{sqlite_path}",
+            connect_args={"check_same_thread": False},
+        )
+
+
+engine       = _build_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db():
+    """Create all tables if they don't already exist."""
     try:
         Base.metadata.create_all(bind=engine)
     except OperationalError as exc:
@@ -56,4 +90,19 @@ def init_db():
 
 
 def get_session():
+    """Return a new SQLAlchemy session. Caller is responsible for closing it."""
     return SessionLocal()
+
+
+def ping_db() -> bool:
+    """
+    Health-check helper: attempts a lightweight query.
+    Returns True if the DB is reachable, False otherwise.
+    Used by the /health endpoint.
+    """
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
