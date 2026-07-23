@@ -887,7 +887,7 @@ export default function Dashboard() {
   const sendVoiceNoteToBackend = async (uri: string, tempMsgId: string) => {
     setIsTyping(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
 
     try {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
@@ -986,7 +986,7 @@ export default function Dashboard() {
     setVoiceTranscript('Processing your voice...');
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
 
     try {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
