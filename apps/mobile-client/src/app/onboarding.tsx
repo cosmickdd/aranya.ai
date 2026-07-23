@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInRight, FadeOutLeft, FadeInUp, withSpring, useAnimatedStyle, useSharedValue, FadeInDown } from 'react-native-reanimated';
 import i18n from '../lib/i18n';
-import { Check } from 'lucide-react-native';
+import { MapPin, Check } from 'lucide-react-native';
 
 const ONBOARDING_STEPS = [
   {
@@ -20,24 +20,27 @@ const ONBOARDING_STEPS = [
     image: require('../../assets/images/onboarding2.png'),
   },
   {
-    titleKey: 'onboarding_3_title',
-    titleFallback: 'Grow Together',
-    subtitleFallback: 'Join the community of thousands of farmers across the country and grow your yield.',
+    titleKey: 'onboarding_4_title',
+    titleFallback: 'Welcome to Aranya',
+    subtitleFallback: 'Let\'s personalize your experience to get accurate weather and mandi updates.',
     image: require('../../assets/images/onboarding3.png'),
   },
-  {
-    titleKey: 'onboarding_4_title',
-    titleFallback: 'Tell Aranya About You',
-    subtitleFallback: 'Aranya remembers your details so you never have to repeat yourself.',
-    image: null,
-  },
+];
+
+const PRESET_CROPS = [
+  { id: 'wheat', label: 'Wheat (गेहूं)', icon: '🌾' },
+  { id: 'rice', label: 'Rice (धान)', icon: '🌾' },
+  { id: 'cotton', label: 'Cotton (कपास)', icon: '☁️' },
+  { id: 'sugarcane', label: 'Sugarcane (गन्ना)', icon: '🎋' },
+  { id: 'onion', label: 'Onion (प्याज)', icon: '🧅' },
+  { id: 'chilli', label: 'Chilli (मिर्च)', icon: '🌶️' },
 ];
 
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [location, setLocation] = useState('');
-  const [crops, setCrops] = useState('');
+  const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const { width } = useWindowDimensions();
   const isDesktop = width > 768;
@@ -45,6 +48,14 @@ export default function Onboarding() {
   const isLastStep = step === ONBOARDING_STEPS.length - 1;
   const isProfileStep = isLastStep;
   const buttonScaleRef = React.useRef(useSharedValue(1));
+
+  const toggleCrop = (cropId: string) => {
+    if (selectedCrops.includes(cropId)) {
+      setSelectedCrops(selectedCrops.filter(id => id !== cropId));
+    } else {
+      setSelectedCrops([...selectedCrops, cropId]);
+    }
+  };
 
   const handleNext = async () => {
     if (!isLastStep) {
@@ -54,8 +65,12 @@ export default function Onboarding() {
 
     setSaving(true);
     try {
+      const cropsString = selectedCrops
+        .map(id => PRESET_CROPS.find(c => c.id === id)?.label || id)
+        .join(', ');
+
       if (location) await AsyncStorage.setItem('aranya_location', location);
-      if (crops) await AsyncStorage.setItem('aranya_crops', crops);
+      if (cropsString) await AsyncStorage.setItem('aranya_crops', cropsString);
 
       const userId = await AsyncStorage.getItem('aranya_user_id') || 'anonymous_mobile_user';
       const lang = await AsyncStorage.getItem('aranya_language') || 'hi';
@@ -69,7 +84,7 @@ export default function Onboarding() {
             user_id: userId,
             language: lang,
             location: location.trim() || undefined,
-            crops: crops.trim() || undefined,
+            crops: cropsString.trim() || undefined,
           }),
         }).catch(() => {});
       }
@@ -95,69 +110,104 @@ export default function Onboarding() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={[styles.container, isDesktop && styles.containerDesktop]}>
-        {/* Illustration — hidden on profile step */}
-        <View style={[styles.illustrationSection, !currentStep.image && styles.profileIllustration, isDesktop && styles.illustrationSectionDesktop]}>
-          {currentStep.image ? (
+      <View style={[styles.container, isDesktop && styles.containerDesktop, isProfileStep && styles.profileBackground]}>
+        
+        {/* Illustration Banner — Now present on all steps to balance layout */}
+        {currentStep.image && (
+          <View style={[
+            styles.illustrationSection, 
+            isDesktop && styles.illustrationSectionDesktop,
+            isProfileStep && styles.profileIllustrationSection
+          ]}>
             <Animated.View key={step} entering={FadeInUp.duration(800).springify()} style={styles.imageWrapper}>
               <Image source={currentStep.image} style={styles.illustration} contentFit="cover" />
             </Animated.View>
-          ) : (
-            <Animated.Text entering={FadeInUp.duration(600).springify()} style={styles.profileEmoji}>
-              🌾
-            </Animated.Text>
-          )}
-        </View>
+          </View>
+        )}
 
-        {/* Content */}
-        <View style={[styles.contentSection, isDesktop && styles.contentSectionDesktop]}>
-          <View style={styles.contentInner}>
-            <Animated.View
-              key={step}
-              entering={FadeInRight.duration(500).springify()}
-              exiting={FadeOutLeft.duration(300)}
-              style={styles.textContent}
+        {/* Content Container */}
+        <View style={[
+          styles.contentSection, 
+          isDesktop && styles.contentSectionDesktop,
+          isProfileStep && styles.profileContentSection
+        ]}>
+          <View style={[styles.contentInner, isProfileStep && styles.profileContentInner]}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={isProfileStep ? styles.scrollContent : undefined}
+              scrollEnabled={isProfileStep}
             >
-              <Text style={styles.title}>{title}</Text>
-              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              <Animated.View
+                key={step}
+                entering={FadeInRight.duration(500).springify()}
+                exiting={FadeOutLeft.duration(300)}
+                style={styles.textContent}
+              >
+                <Text style={styles.title}>{title}</Text>
+                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
-              {/* Profile inputs — only on final slide */}
-              {isProfileStep && (
-                <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>📍 Aapka gaon / shahar</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Varanasi, Nashik, Ludhiana"
-                    placeholderTextColor="#b0b5bc"
-                    value={location}
-                    onChangeText={setLocation}
-                    returnKeyType="next"
-                  />
-                  <Text style={styles.inputLabel}>🌾 Aap kya ugaate hain?</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Wheat, Onion, Rice"
-                    placeholderTextColor="#b0b5bc"
-                    value={crops}
-                    onChangeText={setCrops}
-                    returnKeyType="done"
-                  />
-                  <Text style={styles.skipHint}>(Optional — you can skip for now)</Text>
-                </Animated.View>
-              )}
-            </Animated.View>
-
-            <View style={styles.footer}>
-              <View style={styles.pagination}>
-                {ONBOARDING_STEPS.map((_, index) => {
-                  const isActive = index === step;
-                  return (
-                    <View key={index} style={[styles.dot, isActive ? styles.dotActive : null]}>
-                      {isActive && <View style={styles.dotActiveInner} />}
+                {/* Profile Form Slide (Step 3) */}
+                {isProfileStep && (
+                  <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.formCard}>
+                    
+                    {/* Location Field */}
+                    <Text style={styles.inputLabel}>📍 Location (District / Tehsil)</Text>
+                    <View style={styles.inputContainer}>
+                      <MapPin size={20} color="#9ca3af" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="e.g. Varanasi, Nashik, Ludhiana"
+                        placeholderTextColor="#9ca3af"
+                        value={location}
+                        onChangeText={setLocation}
+                      />
                     </View>
-                  );
-                })}
-              </View>
+
+                    {/* Crops Multi-Select Section */}
+                    <Text style={styles.inputLabel}>🌾 Select crops you grow (फसलें चुनें)</Text>
+                    <View style={styles.chipGrid}>
+                      {PRESET_CROPS.map((crop) => {
+                        const isSelected = selectedCrops.includes(crop.id);
+                        return (
+                          <Pressable
+                            key={crop.id}
+                            style={[styles.chip, isSelected && styles.chipSelected]}
+                            onPress={() => toggleCrop(crop.id)}
+                          >
+                            <Text style={styles.chipEmoji}>{crop.icon}</Text>
+                            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                              {crop.label}
+                            </Text>
+                            {isSelected && (
+                              <View style={styles.chipCheck}>
+                                <Check size={10} color="#ffffff" strokeWidth={3} />
+                              </View>
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <Text style={styles.skipHint}>(You can update this anytime later in your profile)</Text>
+                  </Animated.View>
+                )}
+              </Animated.View>
+            </ScrollView>
+
+            {/* Footer containing Pagination + Continue Button */}
+            <View style={styles.footer}>
+              {!isProfileStep && (
+                <View style={styles.pagination}>
+                  {ONBOARDING_STEPS.map((_, index) => {
+                    const isActive = index === step;
+                    return (
+                      <View key={index} style={[styles.dot, isActive ? styles.dotActive : null]}>
+                        {isActive && <View style={styles.dotActiveInner} />}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
 
               <Pressable
                 style={styles.buttonWrapper}
@@ -168,9 +218,7 @@ export default function Onboarding() {
               >
                 <Animated.View style={[styles.button, animatedButton]}>
                   <Text style={styles.buttonText}>
-                    {saving ? 'Saving...' : isLastStep
-                      ? i18n.t('continue', { defaultValue: 'Get Started' })
-                      : i18n.t('continue', { defaultValue: 'Next' })}
+                    {saving ? 'Saving...' : isLastStep ? 'Get Started' : 'Next'}
                   </Text>
                 </Animated.View>
               </Pressable>
@@ -189,6 +237,9 @@ const styles = StyleSheet.create({
   },
   containerDesktop: {
     flexDirection: 'row',
+  },
+  profileBackground: {
+    backgroundColor: '#f4f6f8',
   },
   illustrationSection: {
     width: '100%',
@@ -234,33 +285,136 @@ const styles = StyleSheet.create({
     shadowColor: 'transparent',
     elevation: 0,
   },
+  profileContentSection: {
+    flex: 1,
+    backgroundColor: '#f4f6f8',
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
   contentInner: {
     flex: 1,
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 48,
-    paddingBottom: 48,
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    paddingBottom: 40,
     justifyContent: 'space-between',
+  },
+  profileContentInner: {
+    paddingTop: 60,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   textContent: {
     alignItems: 'center',
+    width: '100%',
   },
   title: {
     fontFamily: 'Inter_800ExtraBold',
-    fontSize: 28,
+    fontSize: 26,
     color: '#0b3b24',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 16,
+    fontSize: 15,
     color: '#50555c',
     textAlign: 'center',
-    lineHeight: 26,
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  formCard: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#0b3b24',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+    marginTop: 10,
+  },
+  inputLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
+    color: '#111827',
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    position: 'relative',
+  },
+  chipSelected: {
+    borderColor: '#0b3b24',
+    backgroundColor: '#ecfdf5',
+  },
+  chipEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  chipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#4b5563',
+  },
+  chipTextSelected: {
+    color: '#0b3b24',
+    fontWeight: '600',
+  },
+  chipCheck: {
+    marginLeft: 6,
+    backgroundColor: '#0b3b24',
+    borderRadius: 8,
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skipHint: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 16,
   },
   footer: {
     width: '100%',
@@ -270,7 +424,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   dot: {
     width: 8,
@@ -302,8 +456,8 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#fc865a',
-    height: 60,
-    borderRadius: 40,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#fc865a',
@@ -314,49 +468,12 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 0.2,
   },
-  // Profile step styles
-  profileIllustration: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0fdf4',
-    flex: 0.3,
-  },
-  profileEmoji: {
-    fontSize: 72,
-  },
-  inputGroup: {
-    width: '100%',
-    marginTop: 20,
-  },
-  inputLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    color: '#363b41',
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#e5e7eb',
-    paddingHorizontal: 16,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    color: '#1a1f26',
-    backgroundColor: '#fafafa',
-  },
-  skipHint: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    color: '#a8adb3',
-    textAlign: 'center',
-    marginTop: 12,
+  profileIllustrationSection: {
+    flex: 0.35,  // Shrunk from 0.55 to fit both image and form nicely on one screen
+    backgroundColor: '#cce59d',
   },
 });
-
