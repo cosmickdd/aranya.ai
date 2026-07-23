@@ -298,39 +298,28 @@ def api_chat():
         # Extract API key if delegated by client
         api_key = request.headers.get("X-Sarvam-API-Key") or (request.json.get("sarvam_api_key") if request.is_json else None)
 
-        # Step 1: If user writes in a non-English language, translate to English for Gemini
-        gemini_input = msg or ("Analyze this image." if image_base64 else "What is in this document?")
-        if language and language != "en" and msg:
-            gemini_input = translate_text(msg, source_lang=language, target_lang="en", api_key=api_key)
-            logger.info(f"Translated user input to English: {gemini_input[:80]}...")
-        
         # Inject direct system guardrail reminder to prevent LLM poisoning/leak on files
+        gemini_input = msg or ("Analyze this image." if image_base64 else "What is in this document?")
         if image_base64 or doc_base64:
             gemini_input += " (Focus strictly on agriculture/farming. If this image or document is off-topic, decline to answer.)"
         
-        # Step 2: Get AI response from Gemini (always in English for consistency)
+        # Step 2: Get AI response from Gemini directly in target language
         ai_text = generate_response(
             phone_id=user_id, 
             user_text=gemini_input, 
             voice_mode=False, 
-            language="en",  # Always get English from Gemini
+            language=language,
             image_bytes=image_bytes,
             image_mime=image_mime,
             doc_bytes=doc_bytes,
             doc_mime=doc_mime
         )
         
-        # Step 3: Translate Gemini's English response to user's language via Sarvam
-        translated_reply = ai_text
-        if language and language != "en":
-            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language, api_key=api_key)
-            logger.info(f"Translated AI reply to {language}: {translated_reply[:80]}...")
-        
-        # Step 4: Generate TTS audio of the translated response via Sarvam
-        audio_b64 = text_to_speech(translated_reply, language=language, api_key=api_key)
+        # Step 3: Generate TTS audio of the response via Sarvam
+        audio_b64 = text_to_speech(ai_text, language=language, api_key=api_key)
         
         return jsonify({
-            "reply": translated_reply,
+            "reply": ai_text,
             "audio_base64": audio_b64,
         })
     except Exception as e:
@@ -374,32 +363,24 @@ def api_voice_chat():
             return jsonify({"error": "Could not understand audio. Please try again."}), 400
         logger.info(f"STT transcript: {transcript}")
 
-        # Step 2: Translate to English for Gemini
-        gemini_input = transcript
-        if language and language != "en":
-            gemini_input = translate_text(transcript, source_lang=language, target_lang="en", api_key=api_key)
-
-        # Step 3: Gemini AI response
+        # Step 2: Gemini AI response directly in target language (bypassing input translation)
         ai_text = generate_response(
             phone_id=user_id,
-            user_text=gemini_input,
+            user_text=transcript,
             voice_mode=True,
-            language="en",
+            language=language,
         )
 
-        # Step 4: Translate back to user's language
-        translated_reply = ai_text
-        if language and language != "en":
-            translated_reply = translate_text(ai_text, source_lang="en", target_lang=language, api_key=api_key)
-
-        # Step 5: Sarvam TTS
-        audio_b64 = text_to_speech(translated_reply, language=language, api_key=api_key)
+        # Step 3: Sarvam TTS (direct response from Gemini)
+        audio_b64 = text_to_speech(ai_text, language=language, api_key=api_key)
 
         return jsonify({
             "transcript": transcript,
-            "reply": translated_reply,
+            "reply": ai_text,
             "audio_base64": audio_b64,
         })
+
+
     except Exception as e:
         logger.error(f"/api/voice-chat error: {e}")
         return jsonify({"error": "Voice processing failed"}), 500

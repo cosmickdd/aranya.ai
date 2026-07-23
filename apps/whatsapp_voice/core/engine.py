@@ -264,7 +264,16 @@ def generate_response(
                 'kn': 'Kannada', 'pa': 'Punjabi', 'ks': 'Kashmiri'
             }
             lang_name = language_map.get(language, 'Hindi')
-            system += f"\n\n=== STRICT LANGUAGE RULE ===\nThe user has explicitly selected {lang_name} as their language in the app settings. You MUST reply completely in {lang_name}. Do NOT reply in any other language."
+            
+            # Enforce native script response to prevent Hinglish output and feed Sarvam TTS correctly
+            system += (
+                f"\n\n=== STRICT LANGUAGE RULE ===\n"
+                f"The user has explicitly selected {lang_name} as their language in the app settings. "
+                f"You MUST write your entire response completely in {lang_name} using its native script/characters "
+                f"(e.g., Devanagari script for Hindi/Marathi, Tamil script for Tamil, Telugu script for Telugu, etc.). "
+                f"Do NOT reply in Hinglish. Do NOT use Latin/English letters for Indic words. "
+                f"Keep your tone extremely friendly, helpful, and warm."
+            )
 
         if voice_mode:
             system += "\n\nIMPORTANT: This is a voice call. Reply in 2-3 spoken sentences only. No lists, no symbols."
