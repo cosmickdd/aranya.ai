@@ -498,6 +498,25 @@ export default function Dashboard() {
     }
   ]);
 
+  useEffect(() => {
+    AsyncStorage.getItem('aranya_chat_history').then(data => {
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed && parsed.length > 0) {
+            setMessages(parsed);
+          }
+        } catch (e) {
+          console.error('Failed to load chat history', e);
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem('aranya_chat_history', JSON.stringify(messages)).catch(() => {});
+  }, [messages]);
+
   // Call timer
   useEffect(() => {
     if (!voiceMode) return;
@@ -1362,6 +1381,19 @@ export default function Dashboard() {
   // ── Menu Handlers ──
   const handleClearChat = () => {
     setMenuVisible(false);
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to clear all messages? This cannot be undone.')) {
+        setMessages([{
+          id: '1',
+          text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+          isSender: false,
+          hasCallAction: true,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }]);
+      }
+      return;
+    }
+    
     Alert.alert(
       'Clear Chat',
       'Are you sure you want to clear all messages? This cannot be undone.',
@@ -1399,11 +1431,26 @@ export default function Dashboard() {
       console.log('Report sent (or offline, ignoring):', e);
     }
     setReportModalVisible(false);
-    Alert.alert('Thank You', 'Your report has been submitted. Our team will review it shortly.');
+    if (Platform.OS === 'web') {
+      window.alert('Your report has been submitted. Our team will review it shortly.');
+    } else {
+      Alert.alert('Thank You', 'Your report has been submitted. Our team will review it shortly.');
+    }
   };
 
   const handleLogout = async () => {
     setMenuVisible(false);
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to logout?')) {
+        try {
+          await logoutUser();
+          await AsyncStorage.clear();
+        } catch (e) {}
+        router.replace('/sign-in');
+      }
+      return;
+    }
+
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
