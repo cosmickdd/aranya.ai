@@ -40,6 +40,7 @@ export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [location, setLocation] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,6 +50,66 @@ export default function Onboarding() {
   const isLastStep = step === ONBOARDING_STEPS.length - 1;
   const isProfileStep = isLastStep;
   const buttonScaleRef = React.useRef(useSharedValue(1));
+
+  // Local dataset of Indian agricultural districts, cities, and major farming hubs
+  const LOCAL_INDIAN_LOCATIONS = [
+    'Nashik, Maharashtra', 'Varanasi, Uttar Pradesh', 'Ludhiana, Punjab', 
+    'Bhatinda, Punjab', 'Guntur, Andhra Pradesh', 'Rajkot, Gujarat', 
+    'Nagpur, Maharashtra', 'Indore, Madhya Pradesh', 'Hassan, Karnataka', 
+    'Vijayawada, Andhra Pradesh', 'Kurnool, Andhra Pradesh', 'Pune, Maharashtra', 
+    'Anand, Gujarat', 'Amravati, Maharashtra', 'Jabalpur, Madhya Pradesh', 
+    'Meerut, Uttar Pradesh', 'Muzaffarnagar, Uttar Pradesh', 'Sri Ganganagar, Rajasthan', 
+    'Karnal, Haryana', 'Shimla, Himachal Pradesh', 'Solan, Himachal Pradesh', 
+    'Nilgiris (Ooty), Tamil Nadu', 'Anantapur, Andhra Pradesh', 'Medak, Telangana',
+    'Nalgonda, Telangana', 'Jalgaon, Maharashtra', 'Junagadh, Gujarat',
+    'Amritsar, Punjab', 'Patiala, Punjab', 'Hisar, Haryana', 'Rohtak, Haryana',
+    'Aligarh, Uttar Pradesh', 'Bareilly, Uttar Pradesh', 'Jodhpur, Rajasthan'
+  ];
+
+  const handleLocationChange = (text: string) => {
+    setLocation(text);
+    if (text.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Filter local list
+    const filteredLocal = LOCAL_INDIAN_LOCATIONS.filter(item =>
+      item.toLowerCase().includes(text.toLowerCase())
+    );
+
+    setSuggestions(filteredLocal.slice(0, 5));
+
+    // Optional: Fetch matching cities/districts in India from public Geonames/Nominatim API
+    const queryUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&q=${encodeURIComponent(text)}&limit=5`;
+    
+    fetch(queryUrl, {
+      headers: { 'Accept-Language': 'en-US,en;q=0.9,hi;q=0.8' }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          const apiSuggestions = data.map((item: any) => {
+            // Simplify display name: City/District, State
+            const parts = item.display_name.split(', ');
+            if (parts.length > 2) {
+              return `${parts[0]}, ${parts[parts.length - 2]}`;
+            }
+            return item.display_name;
+          });
+          // Merge local and API suggestions (unique values only)
+          setSuggestions(prev => Array.from(new Set([...prev, ...apiSuggestions])).slice(0, 5));
+        }
+      })
+      .catch(() => {
+        // Fallback silently to local list if offline/API fails
+      });
+  };
+
+  const selectSuggestion = (val: string) => {
+    setLocation(val);
+    setSuggestions([]);
+  };
 
   const toggleCrop = (cropId: string) => {
     if (selectedCrops.includes(cropId)) {
@@ -137,6 +198,7 @@ export default function Onboarding() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={isProfileStep ? styles.scrollContent : undefined}
               scrollEnabled={isProfileStep}
+              keyboardShouldPersistTaps="handled"
             >
               <Animated.View
                 key={step}
@@ -159,15 +221,37 @@ export default function Onboarding() {
                     ]}>
                       <MapPin size={18} color={isInputFocused ? '#0b3b24' : '#9ca3af'} style={styles.inputIcon} />
                       <TextInput
-                        style={styles.input}
+                        style={[
+                          styles.input,
+                          Platform.OS === 'web' && { outlineStyle: 'none' } as any
+                        ]}
                         placeholder="Enter your city, village or district"
                         placeholderTextColor="#9ca3af"
                         value={location}
-                        onChangeText={setLocation}
+                        onChangeText={handleLocationChange}
                         onFocus={() => setIsInputFocused(true)}
                         onBlur={() => setIsInputFocused(false)}
                       />
                     </View>
+
+                    {/* Autocomplete Dropdown List */}
+                    {suggestions.length > 0 && (
+                      <Animated.View entering={FadeInDown.duration(200)} style={styles.suggestionsContainer}>
+                        {suggestions.map((item, idx) => (
+                          <Pressable
+                            key={idx}
+                            style={[
+                              styles.suggestionItem,
+                              idx < suggestions.length - 1 && styles.suggestionItemDivider
+                            ]}
+                            onPress={() => selectSuggestion(item)}
+                          >
+                            <MapPin size={14} color="#6b7280" style={{ marginRight: 8 }} />
+                            <Text style={styles.suggestionText}>{item}</Text>
+                          </Pressable>
+                        ))}
+                      </Animated.View>
+                    )}
 
                     {/* Crops Multi-Select Section */}
                     <Text style={styles.inputLabel}>Crops You Grow</Text>
@@ -208,6 +292,7 @@ export default function Onboarding() {
                 )}
               </Animated.View>
             </ScrollView>
+
 
             {/* Footer containing Pagination + Continue Button */}
             <View style={styles.footer}>
@@ -372,6 +457,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 48,
   },
+  inputContainerFocused: {
+    borderColor: '#0b3b24',
+    borderWidth: 1.5,
+    backgroundColor: '#ffffff',
+  },
   inputIcon: {
     marginRight: 8,
   },
@@ -380,6 +470,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     fontSize: 15,
     color: '#111827',
+  },
+  suggestionsContainer: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 6,
+    shadowColor: '#0b3b24',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    maxHeight: 220,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff',
+  },
+  suggestionItemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  suggestionText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: '#374151',
   },
   chipGrid: {
     flexDirection: 'row',
