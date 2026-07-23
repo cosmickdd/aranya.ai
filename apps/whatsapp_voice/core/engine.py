@@ -294,9 +294,9 @@ def generate_response(
     except Exception as e:
         logger.error(f"Gemini error: {e}")
         fallback = (
-            "Yaar, API ka quota khatam ho gaya hai thodi der baad try karo."
+            "Yaar, mujhe abhi thodi takleef ho rahi hai. Ek baar phir try karo."
             if not voice_mode
-            else "Yaar, API ka quota khatam ho gaya hai thodi der baad try karo."
+            else "Main abhi thoda busy hoon. Dobara call karo please."
         )
         return fallback
     finally:
