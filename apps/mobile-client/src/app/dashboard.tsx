@@ -293,17 +293,15 @@ export default function Dashboard() {
     if (voiceStateRef.current !== 'listening') return;
     
     try {
-      if (recorderState.isRecording) {
-        await recorder.stop();
-        const uri = recorder.uri;
-        
-        // Force send the audio anyway if there is a URI (bypass VAD silence check on timeout)
-        if (uri) {
-          hasSpokenRef.current = true; // force spoken flag
-          setVoiceState('processing');
-          await sendVoiceToBackend(uri);
-          return;
-        }
+      await recorder.stop();
+      const uri = recorder.uri;
+      
+      // Force send the audio anyway if there is a URI (bypass VAD silence check on timeout)
+      if (uri) {
+        hasSpokenRef.current = true; // force spoken flag
+        setVoiceState('processing');
+        await sendVoiceToBackend(uri);
+        return;
       }
     } catch (_) {}
     
@@ -785,20 +783,18 @@ export default function Dashboard() {
   };
 
   async function stopRecording() {
-    if (recorderState.isRecording) {
-      setVoiceState('processing');
-      try {
-        await recorder.stop();
-        const uri = recorder.uri;
-        if (!uri) {
-          setVoiceState('idle');
-          return;
-        }
-        await sendVoiceToBackend(uri);
-      } catch (err) {
-        console.error('Stop recording error:', err);
+    setVoiceState('processing');
+    try {
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri) {
         setVoiceState('idle');
+        return;
       }
+      await sendVoiceToBackend(uri);
+    } catch (err) {
+      console.error('Stop recording error:', err);
+      setVoiceState('idle');
     }
   }
 
