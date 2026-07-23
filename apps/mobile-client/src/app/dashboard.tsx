@@ -1435,8 +1435,13 @@ export default function Dashboard() {
           </View>
         </Modal>
 
-        {/* Chat Area */}
-        <View style={cs.chatArea}>
+        {/* Chat Area with Repeating Agri-Pattern */}
+        <ImageBackground 
+          source={require('../../assets/images/bg.png')} 
+          style={cs.chatArea} 
+          resizeMode="repeat"
+          imageStyle={{ opacity: 0.05, tintColor: '#0b3b24' }}
+        >
           <ScrollView ref={scrollViewRef} contentContainerStyle={cs.chatContent}
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
             <View style={cs.dateBadgeContainer}>
@@ -1545,7 +1550,7 @@ export default function Dashboard() {
               </Animated.View>
             )}
           </ScrollView>
-        </View>
+        </ImageBackground>
 
         {/* Image Preview */}
         {selectedImage && (
@@ -2032,7 +2037,7 @@ const cs = StyleSheet.create({
     flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#fc865a', alignItems: 'center',
   },
   reportSubmitText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
-  chatArea: { flex: 1, backgroundColor: '#e5ddd5' },
+  chatArea: { flex: 1, backgroundColor: '#f4f6f4' },
   chatContent: { padding: 16, paddingBottom: 24 },
   dateBadgeContainer: { alignItems: 'center', marginVertical: 16 },
   dateBadge: {
