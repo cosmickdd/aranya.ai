@@ -1018,10 +1018,28 @@ export default function Dashboard() {
       });
 
       clearTimeout(timeoutId);
-      const data = await response.json();
+      const isOk = response.ok;
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        console.error("Failed to parse JSON response:", jsonErr);
+        data = { error: `Server returned status ${response.status}` };
+      }
 
-      if (data.error) {
-        setVoiceTranscript(data.error);
+      if (!isOk || data.error) {
+        const errMsg = data.error || `Server error (${response.status})`;
+        setVoiceState('speaking'); // set to speaking briefly to show text
+        setVoiceTranscript(errMsg);
+        // Wait 4.5 seconds so the user can read the error on screen, then restart
+        setTimeout(() => {
+          if (voiceModeRef.current) {
+            setVoiceState('idle');
+            setTimeout(() => {
+              if (voiceModeRef.current) startRecording();
+            }, 100);
+          }
+        }, 4500);
         return;
       }
 
@@ -1081,19 +1099,31 @@ export default function Dashboard() {
         }
       }
 
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      console.error('Voice chat error:', error);
-      const isTimeout = error.name === 'AbortError';
-      setVoiceTranscript(isTimeout ? 'Server response timed out. Please try again.' : 'Connection error. Trying again...');
-    } finally {
-      // Always auto-restart listening to keep the call alive
+      // Successfully processed, go to idle and restart listening
       setVoiceState('idle');
       setTimeout(() => {
         if (voiceModeRef.current) {
           startRecording();
         }
       }, 100);
+
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      console.error('Voice chat error:', error);
+      const isTimeout = error.name === 'AbortError';
+      const errMsg = isTimeout ? 'Server response timed out. Please try again.' : 'Connection error. Trying again...';
+      
+      setVoiceState('speaking');
+      setVoiceTranscript(errMsg);
+      
+      setTimeout(() => {
+        if (voiceModeRef.current) {
+          setVoiceState('idle');
+          setTimeout(() => {
+            if (voiceModeRef.current) startRecording();
+          }, 100);
+        }
+      }, 4500);
     }
   };
 
