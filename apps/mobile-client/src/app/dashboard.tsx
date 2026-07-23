@@ -280,6 +280,10 @@ export default function Dashboard() {
         (now - silenceStartRef.current > 2000) &&
         voiceStateRef.current === 'listening'
       ) {
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
         stopRecording();
       }
     }
@@ -784,6 +788,10 @@ export default function Dashboard() {
   };
 
   async function stopRecording() {
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
     setVoiceState('processing');
     try {
       await recorder.stop();
