@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInRight, FadeOutLeft, FadeInUp, withSpring, useAnimatedStyle, useSharedValue, FadeInDown } from 'react-native-reanimated';
 import i18n from '../lib/i18n';
-import { MapPin, Check } from 'lucide-react-native';
+import { MapPin, Check, Sprout, Leaf, CircleDot, Flame } from 'lucide-react-native';
 
 const ONBOARDING_STEPS = [
   {
@@ -28,12 +28,12 @@ const ONBOARDING_STEPS = [
 ];
 
 const PRESET_CROPS = [
-  { id: 'wheat', label: 'Wheat (गेहूं)', icon: '🌾' },
-  { id: 'rice', label: 'Rice (धान)', icon: '🌾' },
-  { id: 'cotton', label: 'Cotton (कपास)', icon: '☁️' },
-  { id: 'sugarcane', label: 'Sugarcane (गन्ना)', icon: '🎋' },
-  { id: 'onion', label: 'Onion (प्याज)', icon: '🧅' },
-  { id: 'chilli', label: 'Chilli (मिर्च)', icon: '🌶️' },
+  { id: 'wheat', label: 'Wheat (गेहूं)', Icon: Sprout, color: '#f59e0b' },
+  { id: 'rice', label: 'Rice (धान)', Icon: Sprout, color: '#10b981' },
+  { id: 'cotton', label: 'Cotton (कपास)', Icon: Leaf, color: '#6b7280' },
+  { id: 'sugarcane', label: 'Sugarcane (गन्ना)', Icon: Leaf, color: '#047857' },
+  { id: 'onion', label: 'Onion (प्याज)', Icon: CircleDot, color: '#b91c1c' },
+  { id: 'chilli', label: 'Chilli (मिर्च)', Icon: Flame, color: '#dc2626' },
 ];
 
 export default function Onboarding() {
@@ -41,6 +41,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [location, setLocation] = useState('');
   const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [saving, setSaving] = useState(false);
   const { width } = useWindowDimensions();
   const isDesktop = width > 768;
@@ -112,7 +113,7 @@ export default function Onboarding() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={[styles.container, isDesktop && styles.containerDesktop, isProfileStep && styles.profileBackground]}>
         
-        {/* Illustration Banner — Now present on all steps to balance layout */}
+        {/* Illustration Banner */}
         {currentStep.image && (
           <View style={[
             styles.illustrationSection, 
@@ -151,36 +152,50 @@ export default function Onboarding() {
                   <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.formCard}>
                     
                     {/* Location Field */}
-                    <Text style={styles.inputLabel}>📍 Location (District / Tehsil)</Text>
-                    <View style={styles.inputContainer}>
-                      <MapPin size={20} color="#9ca3af" style={styles.inputIcon} />
+                    <Text style={styles.inputLabel}>Location (District / Tehsil)</Text>
+                    <View style={[
+                      styles.inputContainer,
+                      isInputFocused && styles.inputContainerFocused
+                    ]}>
+                      <MapPin size={18} color={isInputFocused ? '#0b3b24' : '#9ca3af'} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
-                        placeholder="e.g. Varanasi, Nashik, Ludhiana"
+                        placeholder="Enter your city, village or district"
                         placeholderTextColor="#9ca3af"
                         value={location}
                         onChangeText={setLocation}
+                        onFocus={() => setIsInputFocused(true)}
+                        onBlur={() => setIsInputFocused(false)}
                       />
                     </View>
 
                     {/* Crops Multi-Select Section */}
-                    <Text style={styles.inputLabel}>🌾 Select crops you grow (फसलें चुनें)</Text>
+                    <Text style={styles.inputLabel}>Crops You Grow</Text>
                     <View style={styles.chipGrid}>
                       {PRESET_CROPS.map((crop) => {
                         const isSelected = selectedCrops.includes(crop.id);
+                        const CropIcon = crop.Icon;
                         return (
                           <Pressable
                             key={crop.id}
-                            style={[styles.chip, isSelected && styles.chipSelected]}
+                            style={[
+                              styles.chip, 
+                              isSelected && styles.chipSelected,
+                              isSelected && { borderColor: crop.color }
+                            ]}
                             onPress={() => toggleCrop(crop.id)}
                           >
-                            <Text style={styles.chipEmoji}>{crop.icon}</Text>
+                            <CropIcon 
+                              size={15} 
+                              color={isSelected ? '#0b3b24' : '#6b7280'} 
+                              style={styles.chipIcon} 
+                            />
                             <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                               {crop.label}
                             </Text>
                             {isSelected && (
-                              <View style={styles.chipCheck}>
-                                <Check size={10} color="#ffffff" strokeWidth={3} />
+                              <View style={[styles.chipCheck, { backgroundColor: crop.color }]}>
+                                <Check size={8} color="#ffffff" strokeWidth={3} />
                               </View>
                             )}
                           </Pressable>
@@ -188,7 +203,7 @@ export default function Onboarding() {
                       })}
                     </View>
 
-                    <Text style={styles.skipHint}>(You can update this anytime later in your profile)</Text>
+                    <Text style={styles.skipHint}>You can update this anytime later in settings</Text>
                   </Animated.View>
                 )}
               </Animated.View>
