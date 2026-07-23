@@ -491,7 +491,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+      text: 'नमस्ते! 🙏 मैं अरण्य हूँ, आपका AI कृषि मित्र। आज मैं आपकी फसल, मौसम या मंडी भाव में कैसे मदद कर सकता हूँ?',
       isSender: false,
       hasCallAction: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1385,7 +1385,7 @@ export default function Dashboard() {
       if (window.confirm('Are you sure you want to clear all messages? This cannot be undone.')) {
         setMessages([{
           id: '1',
-          text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+          text: 'नमस्ते! 🙏 मैं अरण्य हूँ, आपका AI कृषि मित्र। आज मैं आपकी फसल, मौसम या मंडी भाव में कैसे मदद कर सकता हूँ?',
           isSender: false,
           hasCallAction: true,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1402,7 +1402,7 @@ export default function Dashboard() {
         { text: 'Clear', style: 'destructive', onPress: () => {
           setMessages([{
             id: '1',
-            text: 'Namaste! 🙏 I am Aranya, your AI farming assistant. How can I help you with your crops, weather, or market prices today?',
+            text: 'नमस्ते! 🙏 मैं अरण्य हूँ, आपका AI कृषि मित्र। आज मैं आपकी फसल, मौसम या मंडी भाव में कैसे मदद कर सकता हूँ?',
             isSender: false,
             hasCallAction: true,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1644,7 +1644,7 @@ export default function Dashboard() {
                 {msg.hasCallAction && (
                   <Pressable style={cs.callActionButton} onPress={toggleVoiceMode}>
                     <Phone color="#10b981" size={16} />
-                    <Text style={cs.callActionText}>Start Voice Chat</Text>
+                    <Text style={cs.callActionText}>बोलकर बात करें (Voice Chat)</Text>
                   </Pressable>
                 )}
                 <View style={cs.messageFooter}>
@@ -1658,31 +1658,31 @@ export default function Dashboard() {
             {/* Centered Dashboard Helper Cards (Only when chat has only the welcome message) */}
             {messages.length <= 1 && (
               <Animated.View entering={FadeInDown.delay(200).duration(500)} style={cs.suggestionsGrid}>
-                <Text style={cs.suggestionsHeader}>Quick Prompts</Text>
+                <Text style={cs.suggestionsHeader}>त्वरित सवाल (Quick Prompts)</Text>
                 
                 <View style={cs.suggestionsRow}>
                   <Pressable 
                     style={cs.suggestionGridCard} 
                     onPress={() => {
-                      setInputText("How is the weather in my village today?");
+                      setInputText("आज मेरे गांव में मौसम कैसा रहेगा?");
                       setTimeout(() => handleSend(), 50);
                     }}
                   >
                     <Text style={cs.cardIcon}>🌦️</Text>
-                    <Text style={cs.cardTitle}>Weather</Text>
-                    <Text style={cs.cardSubtitle}>Get local forecast & rain alerts</Text>
+                    <Text style={cs.cardTitle}>मौसम (Weather)</Text>
+                    <Text style={cs.cardSubtitle}>बारिश और मौसम की जानकारी</Text>
                   </Pressable>
 
                   <Pressable 
                     style={cs.suggestionGridCard}
                     onPress={() => {
-                      setInputText("Show me the current market mandi prices.");
+                      setInputText("मंडी में आज का ताज़ा भाव क्या है?");
                       setTimeout(() => handleSend(), 50);
                     }}
                   >
                     <Text style={cs.cardIcon}>🌾</Text>
-                    <Text style={cs.cardTitle}>Mandi Prices</Text>
-                    <Text style={cs.cardSubtitle}>Check latest crop market rates</Text>
+                    <Text style={cs.cardTitle}>मंडी भाव (Mandi)</Text>
+                    <Text style={cs.cardSubtitle}>फसलों के ताज़ा दाम जानें</Text>
                   </Pressable>
                 </View>
 
@@ -1690,25 +1690,25 @@ export default function Dashboard() {
                   <Pressable 
                     style={cs.suggestionGridCard}
                     onPress={() => {
-                      setInputText("My crops are sick. How do I diagnose and cure them?");
+                      setInputText("मेरी फसल में बीमारी लग गई है, क्या उपाय करूं?");
                       setTimeout(() => handleSend(), 50);
                     }}
                   >
                     <Text style={cs.cardIcon}>🐛</Text>
-                    <Text style={cs.cardTitle}>Crop Care</Text>
-                    <Text style={cs.cardSubtitle}>Diagnose pests and diseases</Text>
+                    <Text style={cs.cardTitle}>फसल की देखभाल</Text>
+                    <Text style={cs.cardSubtitle}>कीट और रोगों का इलाज</Text>
                   </Pressable>
 
                   <Pressable 
                     style={cs.suggestionGridCard}
                     onPress={() => {
-                      setInputText("What government schemes are available for Indian farmers?");
+                      setInputText("किसानों के लिए कौन सी सरकारी योजनाएं हैं?");
                       setTimeout(() => handleSend(), 50);
                     }}
                   >
                     <Text style={cs.cardIcon}>📜</Text>
-                    <Text style={cs.cardTitle}>Schemes</Text>
-                    <Text style={cs.cardSubtitle}>Find PM-Kisan & insurance info</Text>
+                    <Text style={cs.cardTitle}>योजनाएं (Schemes)</Text>
+                    <Text style={cs.cardSubtitle}>पीएम-किसान और बीमा की जानकारी</Text>
                   </Pressable>
                 </View>
               </Animated.View>
@@ -1766,7 +1766,7 @@ export default function Dashboard() {
             </Animated.View>
           ) : (
             <View style={cs.inputContainer}>
-              <TextInput style={cs.textInput} placeholder="Message Aranya..." placeholderTextColor="#6b7280"
+              <TextInput style={cs.textInput} placeholder="अरण्य को संदेश लिखें..." placeholderTextColor="#6b7280"
                 value={inputText} onChangeText={setInputText} onSubmitEditing={handleSend} />
               <Pressable style={cs.iconButton} onPress={() => setAttachmentSheetVisible(true)}>
                 <Paperclip color="#4b5563" size={20} />
