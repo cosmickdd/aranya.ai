@@ -206,7 +206,7 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
         }
         data = {
             "language_code": lang_code,
-            "model": "saaras:v3-realtime",
+            "model": "saarika:v2.5",
             "with_timestamps": "false",
         }
         headers = {
