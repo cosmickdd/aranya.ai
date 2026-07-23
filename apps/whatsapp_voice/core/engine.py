@@ -294,9 +294,9 @@ def generate_response(
     except Exception as e:
         logger.error(f"Gemini error: {e}")
         fallback = (
-            "Yaar, mujhe abhi thodi takleef ho rahi hai. Ek baar phir try karo."
+            f"Yaar, mujhe abhi thodi takleef ho rahi hai. Exception: {e}"
             if not voice_mode
-            else "Main abhi thoda busy hoon. Dobara call karo please."
+            else f"Main abhi thoda busy hoon. Exception: {e}"
         )
         return fallback
     finally:
