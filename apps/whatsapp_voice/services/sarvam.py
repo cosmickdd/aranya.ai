@@ -165,8 +165,8 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
                 
                 temp_out_name = temp_in_name + ".wav"
                 
-                # Run ffmpeg reading from file and writing to file
-                cmd = ["ffmpeg", "-y", "-i", temp_in_name, "-f", "wav", "-ar", "16000", "-ac", "1", temp_out_name]
+                # Run ffmpeg reading from file and writing to file with performance tweaks
+                cmd = ["ffmpeg", "-y", "-threads", "4", "-i", temp_in_name, "-f", "wav", "-ar", "16000", "-ac", "1", "-vn", temp_out_name]
                 process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
                 if process.returncode == 0 and os.path.exists(temp_out_name):
@@ -206,7 +206,7 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
         }
         data = {
             "language_code": lang_code,
-            "model": "saaras:v3",
+            "model": "saaras:v3-realtime",
             "with_timestamps": "false",
         }
         headers = {
