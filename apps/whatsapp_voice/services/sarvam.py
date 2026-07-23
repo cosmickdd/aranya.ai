@@ -153,24 +153,44 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
 
         # If input is webm, convert it to wav using ffmpeg (which is pre-installed)
         if "webm" in mime_type or mime_type == "audio/webm":
-            logger.info("Converting webm audio to wav format using ffmpeg...")
+            logger.info("Converting webm audio to wav format using ffmpeg file-transcoding...")
+            import tempfile
+            temp_in_name = None
+            temp_out_name = None
             try:
-                # Use subprocess to run ffmpeg reading from stdin and writing to stdout
-                process = subprocess.Popen(
-                    ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "-ar", "16000", "-ac", "1", "pipe:1"],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
-                )
-                converted_bytes, stderr = process.communicate(input=audio_bytes)
-                if process.returncode == 0 and len(converted_bytes) > 0:
-                    audio_bytes = converted_bytes
+                # Write to temp file to make it seekable for ffmpeg
+                with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_in:
+                    temp_in.write(audio_bytes)
+                    temp_in_name = temp_in.name
+                
+                temp_out_name = temp_in_name + ".wav"
+                
+                # Run ffmpeg reading from file and writing to file
+                cmd = ["ffmpeg", "-y", "-i", temp_in_name, "-f", "wav", "-ar", "16000", "-ac", "1", temp_out_name]
+                process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                
+                if process.returncode == 0 and os.path.exists(temp_out_name):
+                    with open(temp_out_name, "rb") as f:
+                        audio_bytes = f.read()
                     mime_type = "audio/wav"
                     logger.info(f"Transcoding successful: converted to WAV ({len(audio_bytes)} bytes)")
                 else:
-                    logger.error(f"ffmpeg conversion failed: {stderr.decode('utf-8', errors='ignore')}")
+                    err_msg = process.stderr.decode('utf-8', errors='ignore')
+                    logger.error(f"ffmpeg conversion failed: {err_msg}")
             except Exception as ffmpeg_err:
                 logger.error(f"Failed to transcode webm using ffmpeg: {ffmpeg_err}")
+            finally:
+                # Clean up temporary files
+                if temp_in_name and os.path.exists(temp_in_name):
+                    try:
+                        os.remove(temp_in_name)
+                    except Exception:
+                        pass
+                if temp_out_name and os.path.exists(temp_out_name):
+                    try:
+                        os.remove(temp_out_name)
+                    except Exception:
+                        pass
 
         if "webm" in mime_type:
             ext = "webm"
