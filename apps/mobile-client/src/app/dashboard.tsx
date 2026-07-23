@@ -326,11 +326,16 @@ export default function Dashboard() {
     }
   }, [recorderState.isRecording, recorder]);
 
+  const handleSilenceTimeoutRef = useRef(handleSilenceTimeout);
+  useEffect(() => {
+    handleSilenceTimeoutRef.current = handleSilenceTimeout;
+  }, [handleSilenceTimeout]);
+
   useEffect(() => {
     if (voiceState === 'listening') {
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = setTimeout(() => {
-        handleSilenceTimeout();
+        handleSilenceTimeoutRef.current();
       }, 8000);
     } else {
       if (silenceTimeoutRef.current) {
@@ -341,7 +346,7 @@ export default function Dashboard() {
     return () => {
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     };
-  }, [voiceState, handleSilenceTimeout]);
+  }, [voiceState]);
 
   // Custom WhatsApp Camera Modal States
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
