@@ -995,9 +995,25 @@ export default function Dashboard() {
       if (Platform.OS === 'web') {
         const response = await fetch(uri);
         const audioBlob = await response.blob();
+        console.log("Recorded Audio Blob Size (Web):", audioBlob.size, "bytes, mime:", audioBlob.type);
+        
+        if (audioBlob.size < 1000) {
+          console.warn("Recorded voice file is empty or extremely quiet! Check browser microphone permissions.");
+          setVoiceState('speaking');
+          setVoiceTranscript("Microphone recorded no sound. Please check your mic permissions.");
+          clearTimeout(timeoutId);
+          setTimeout(() => {
+            if (voiceModeRef.current) {
+              setVoiceState('idle');
+              setTimeout(() => { if (voiceModeRef.current) startRecording(); }, 100);
+            }
+          }, 4500);
+          return;
+        }
         formData.append('audio', audioBlob, 'voice.webm');
       } else {
         // Native APK / IPA support
+        console.log("Recorded Audio URI (Native):", uri);
         formData.append('audio', {
           uri: uri,
           name: Platform.OS === 'android' ? 'voice.m4a' : 'voice.caf',
