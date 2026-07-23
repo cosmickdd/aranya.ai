@@ -890,6 +890,9 @@ export default function Dashboard() {
 
   const sendVoiceNoteToBackend = async (uri: string, tempMsgId: string) => {
     setIsTyping(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout
+
     try {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
       const formData = new FormData();
@@ -915,8 +918,10 @@ export default function Dashboard() {
           'X-Sarvam-API-Key': process.env.EXPO_PUBLIC_SARVAM_API_KEY || '',
         },
         body: formData,
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (data.error) {
@@ -965,11 +970,13 @@ export default function Dashboard() {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
+      clearTimeout(timeoutId);
       console.error('Upload voice note error:', e);
+      const isTimeout = e.name === 'AbortError';
       setMessages(prev => prev.map(m => m.id === tempMsgId ? { 
         ...m, 
-        text: 'Connection error. Upload failed.', 
+        text: isTimeout ? 'Server response timed out. Please try again.' : 'Connection error. Upload failed.', 
         isTranscribing: false 
       } : m));
     } finally {
@@ -981,6 +988,9 @@ export default function Dashboard() {
   const sendVoiceToBackend = async (uri: string) => {
     setVoiceState('processing');
     setVoiceTranscript('Processing your voice...');
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout
 
     try {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
@@ -1008,8 +1018,10 @@ export default function Dashboard() {
           'X-Sarvam-API-Key': process.env.EXPO_PUBLIC_SARVAM_API_KEY || '',
         },
         body: formData,
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (data.error) {
@@ -1073,9 +1085,11 @@ export default function Dashboard() {
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error('Voice chat error:', error);
-      setVoiceTranscript('Connection error. Trying again...');
+      const isTimeout = error.name === 'AbortError';
+      setVoiceTranscript(isTimeout ? 'Server response timed out. Please try again.' : 'Connection error. Trying again...');
     } finally {
       // Always auto-restart listening to keep the call alive
       setVoiceState('idle');
