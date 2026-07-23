@@ -210,6 +210,8 @@ export default function Dashboard() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportText, setReportText] = useState('');
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const isNearBottomRef = useRef(true);
 
   // Voice Mode
   const [voiceMode, setVoiceMode] = useState(false);
@@ -1557,8 +1559,23 @@ export default function Dashboard() {
 
         {/* Chat Area with Premium Warm-Sand Background */}
         <View style={cs.chatArea}>
-          <ScrollView ref={scrollViewRef} contentContainerStyle={cs.chatContent}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={cs.chatContent}
+            onContentSizeChange={() => {
+              if (isNearBottomRef.current) {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }
+            }}
+            onScroll={(e) => {
+              const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+              const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+              const nearBottom = distanceFromBottom < 80;
+              isNearBottomRef.current = nearBottom;
+              setShowScrollDown(!nearBottom && contentSize.height > layoutMeasurement.height + 100);
+            }}
+            scrollEventThrottle={100}
+          >
             <View style={cs.dateBadgeContainer}>
               <View style={cs.dateBadge}><Text style={cs.dateText}>Today</Text></View>
             </View>
@@ -1655,64 +1672,7 @@ export default function Dashboard() {
               </Animated.View>
             ))}
 
-            {/* Centered Dashboard Helper Cards (Only when chat has only the welcome message) */}
-            {messages.length <= 1 && (
-              <Animated.View entering={FadeInDown.delay(200).duration(500)} style={cs.suggestionsGrid}>
-                <Text style={cs.suggestionsHeader}>त्वरित सवाल (Quick Prompts)</Text>
-                
-                <View style={cs.suggestionsRow}>
-                  <Pressable 
-                    style={cs.suggestionGridCard} 
-                    onPress={() => {
-                      setInputText("आज मेरे गांव में मौसम कैसा रहेगा?");
-                      setTimeout(() => handleSend(), 50);
-                    }}
-                  >
-                    <Text style={cs.cardIcon}>🌦️</Text>
-                    <Text style={cs.cardTitle}>मौसम (Weather)</Text>
-                    <Text style={cs.cardSubtitle}>बारिश और मौसम की जानकारी</Text>
-                  </Pressable>
 
-                  <Pressable 
-                    style={cs.suggestionGridCard}
-                    onPress={() => {
-                      setInputText("मंडी में आज का ताज़ा भाव क्या है?");
-                      setTimeout(() => handleSend(), 50);
-                    }}
-                  >
-                    <Text style={cs.cardIcon}>🌾</Text>
-                    <Text style={cs.cardTitle}>मंडी भाव (Mandi)</Text>
-                    <Text style={cs.cardSubtitle}>फसलों के ताज़ा दाम जानें</Text>
-                  </Pressable>
-                </View>
-
-                <View style={cs.suggestionsRow}>
-                  <Pressable 
-                    style={cs.suggestionGridCard}
-                    onPress={() => {
-                      setInputText("मेरी फसल में बीमारी लग गई है, क्या उपाय करूं?");
-                      setTimeout(() => handleSend(), 50);
-                    }}
-                  >
-                    <Text style={cs.cardIcon}>🐛</Text>
-                    <Text style={cs.cardTitle}>फसल की देखभाल</Text>
-                    <Text style={cs.cardSubtitle}>कीट और रोगों का इलाज</Text>
-                  </Pressable>
-
-                  <Pressable 
-                    style={cs.suggestionGridCard}
-                    onPress={() => {
-                      setInputText("किसानों के लिए कौन सी सरकारी योजनाएं हैं?");
-                      setTimeout(() => handleSend(), 50);
-                    }}
-                  >
-                    <Text style={cs.cardIcon}>📜</Text>
-                    <Text style={cs.cardTitle}>योजनाएं (Schemes)</Text>
-                    <Text style={cs.cardSubtitle}>पीएम-किसान और बीमा की जानकारी</Text>
-                  </Pressable>
-                </View>
-              </Animated.View>
-            )}
 
             {isTyping && (
               <Animated.View entering={FadeIn} style={[cs.messageBubble, cs.receivedBubble, { paddingVertical: 16 }]}>
@@ -1724,6 +1684,19 @@ export default function Dashboard() {
               </Animated.View>
             )}
           </ScrollView>
+
+          {/* WhatsApp-style Scroll to Bottom FAB */}
+          {showScrollDown && (
+            <Pressable
+              style={cs.scrollDownFab}
+              onPress={() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+                setShowScrollDown(false);
+              }}
+            >
+              <ChevronDown color="#6b7280" size={22} />
+            </Pressable>
+          )}
         </View>
 
         {/* Image Preview */}
@@ -1751,6 +1724,34 @@ export default function Dashboard() {
           </View>
         )}
 
+
+        {/* Suggestion Chips (only when chat is fresh) */}
+        {messages.length <= 1 && !isRecordingVoiceNote && (
+          <Animated.View entering={FadeIn.duration(300)} style={cs.chipRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cs.chipScroll}>
+              <Pressable style={cs.chip} onPress={() => sendMessage('आज मेरे गांव में मौसम कैसा रहेगा?')}>
+                <Text style={cs.chipEmoji}>🌦️</Text>
+                <Text style={cs.chipText}>मौसम</Text>
+              </Pressable>
+              <Pressable style={cs.chip} onPress={() => sendMessage('मंडी में आज का ताज़ा भाव क्या है?')}>
+                <Text style={cs.chipEmoji}>🌾</Text>
+                <Text style={cs.chipText}>मंडी भाव</Text>
+              </Pressable>
+              <Pressable style={cs.chip} onPress={() => sendMessage('मेरी फसल में बीमारी लग गई है, क्या उपाय करूं?')}>
+                <Text style={cs.chipEmoji}>🐛</Text>
+                <Text style={cs.chipText}>फसल देखभाल</Text>
+              </Pressable>
+              <Pressable style={cs.chip} onPress={() => sendMessage('किसानों के लिए कौन सी सरकारी योजनाएं हैं?')}>
+                <Text style={cs.chipEmoji}>📜</Text>
+                <Text style={cs.chipText}>योजनाएं</Text>
+              </Pressable>
+              <Pressable style={cs.chip} onPress={() => sendMessage('मेरे खेत की मिट्टी की जांच कैसे करवाऊं?')}>
+                <Text style={cs.chipEmoji}>🧪</Text>
+                <Text style={cs.chipText}>मिट्टी जांच</Text>
+              </Pressable>
+            </ScrollView>
+          </Animated.View>
+        )}
 
         {/* Input */}
         <View style={cs.inputArea}>
@@ -2160,9 +2161,16 @@ const cs = StyleSheet.create({
     flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#fc865a', alignItems: 'center',
   },
   reportSubmitText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
-  chatArea: { flex: 1, backgroundColor: '#FAF8F5' },
-  chatContent: { padding: 16, paddingBottom: 24 },
+  chatArea: { flex: 1, backgroundColor: '#FAF8F5', position: 'relative' as any },
+  chatContent: { padding: 16, paddingBottom: 24, flexGrow: 1 },
   dateBadgeContainer: { alignItems: 'center', marginVertical: 16 },
+  scrollDownFab: {
+    position: 'absolute', bottom: 12, right: 16,
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6, elevation: 5,
+    borderWidth: 1, borderColor: '#e5e7eb',
+  },
   dateBadge: {
     backgroundColor: '#ffffff', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16,
     shadowColor: '#000', shadowOpacity: 0.04, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 2,
@@ -2311,59 +2319,34 @@ const cs = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  // Suggestions card grid (renders in scroll history when empty)
-  suggestionsGrid: {
-    padding: 16,
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-    marginTop: 20,
-  },
-  suggestionsHeader: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 15,
-    color: '#0b3b24',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    textAlign: 'center',
-  },
-  suggestionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
-  },
-  suggestionGridCard: {
-    flex: 1,
+  // Suggestion Chips (above input bar)
+  chipRow: {
     backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingVertical: 10,
+  },
+  chipScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#0b3b24',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    gap: 6,
   },
-  cardIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+  chipEmoji: {
+    fontSize: 16,
   },
-  cardTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    color: '#111827',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  cardSubtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 15,
+  chipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#065f46',
   },
 });
