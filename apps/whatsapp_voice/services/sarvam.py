@@ -29,17 +29,17 @@ LANG_MAP = {
 
 # Sarvam TTS speaker voices per language
 SPEAKER_MAP = {
-    "hi-IN": "meera",
-    "en-IN": "meera",
-    "ta-IN": "meera",
-    "te-IN": "meera",
-    "mr-IN": "meera",
-    "bn-IN": "meera",
-    "gu-IN": "meera",
-    "kn-IN": "meera",
-    "pa-IN": "meera",
-    "ml-IN": "meera",
-    "od-IN": "meera",
+    "hi-IN": "ritu",
+    "en-IN": "ritu",
+    "ta-IN": "ritu",
+    "te-IN": "ritu",
+    "mr-IN": "ritu",
+    "bn-IN": "ritu",
+    "gu-IN": "ritu",
+    "kn-IN": "ritu",
+    "pa-IN": "ritu",
+    "ml-IN": "ritu",
+    "od-IN": "ritu",
 }
 
 
@@ -112,7 +112,7 @@ def text_to_speech(text: str, language: str = "hi", api_key: str = None) -> str:
             json={
                 "inputs": [chunk],
                 "target_language_code": lang_code,
-                "model": "bulbul:v2",
+                "model": "bulbul:v3",
                 "speaker": speaker,
                 "pace": 1.0,
                 "enable_preprocessing": True,
