@@ -271,10 +271,6 @@ export default function Dashboard() {
       silenceStartRef.current = now;
       if (!hasSpokenRef.current) {
         hasSpokenRef.current = true;
-        if (silenceTimeoutRef.current) {
-          clearTimeout(silenceTimeoutRef.current);
-          silenceTimeoutRef.current = null;
-        }
       }
     } else {
       if (
