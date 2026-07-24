@@ -770,17 +770,6 @@ export default function Dashboard() {
   // ── Voice Recording via expo-audio (Universal) ──
   const startRecording = async () => {
     try {
-      const permission = await requestRecordingPermissionsAsync();
-      if (permission.status !== 'granted') {
-        Alert.alert(
-          'Microphone Permission Required',
-          'Aranya needs microphone access for voice chat. Please enable it in your device Settings.',
-          [{ text: 'OK' }]
-        );
-        setVoiceState('idle');
-        return;
-      }
-
       try {
         await setAudioModeAsync({
           allowsRecording: true,
@@ -788,6 +777,21 @@ export default function Dashboard() {
         });
       } catch (modeErr) {
         console.warn('setAudioModeAsync error:', modeErr);
+      }
+
+      let permission = await requestRecordingPermissionsAsync();
+      if (!permission.granted && AudioModule?.requestRecordingPermissionsAsync) {
+        permission = await AudioModule.requestRecordingPermissionsAsync();
+      }
+
+      if (!permission.granted) {
+        Alert.alert(
+          'Microphone Permission Required',
+          'Aranya needs microphone access for voice chat. Please enable Microphone permissions for Aranya AI in your phone Settings -> Apps -> Aranya AI -> Permissions.',
+          [{ text: 'OK' }]
+        );
+        setVoiceState('idle');
+        return;
       }
 
       setVoiceState('listening');
