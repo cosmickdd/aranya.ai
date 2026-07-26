@@ -38,7 +38,16 @@ function getWebAudioContext(): AudioContext {
 }
 
 let _activeAudioPlayer: any = null;
+let _webAudioSource: any = null;
+
 async function stopActiveAudio(): Promise<void> {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+  if (_webAudioSource) {
+    try { _webAudioSource.stop(); } catch (e) {}
+    _webAudioSource = null;
+  }
   if (_activeAudioPlayer) {
     try {
       _activeAudioPlayer.pause();
@@ -51,6 +60,7 @@ async function stopActiveAudio(): Promise<void> {
 }
 
 async function playBase64Audio(base64: string): Promise<void> {
+  await stopActiveAudio();
   if (Platform.OS !== 'web') {
     const FileSystem = require('expo-file-system');
     const fileUri = `${FileSystem.cacheDirectory}temp_voice_${Date.now()}.wav`;
@@ -96,9 +106,13 @@ async function playBase64Audio(base64: string): Promise<void> {
       const arrayBuffer = base64ToArrayBuffer(base64);
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
       const source = ctx.createBufferSource();
+      _webAudioSource = source;
       source.buffer = audioBuffer;
       source.connect(ctx.destination);
-      source.onended = () => resolve();
+      source.onended = () => {
+        _webAudioSource = null;
+        resolve();
+      };
       source.start(0);
     } catch (e) {
       console.error('Web audio playback error:', e);
@@ -535,7 +549,11 @@ export default function Dashboard() {
   // ── Audio Playback ──
   const playAudio = async (audioSource: { base64?: string; uri?: string }, msgId: string) => {
     try {
-      if (playingId === msgId) { setPlayingId(null); return; }
+      await stopActiveAudio();
+      if (playingId === msgId) {
+        setPlayingId(null);
+        return;
+      }
       setPlayingId(msgId);
       if (audioSource.uri) {
         const player = createAudioPlayer(audioSource.uri);
