@@ -1339,16 +1339,23 @@ export default function Dashboard() {
     }
   };
 
-
   const sendVoiceToBackend = async (uri: string) => {
     setVoiceState('processing');
+    setVoiceTranscript('Connecting to server...');
+
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
+
+    // Wake up the server first (Render free tier goes to sleep)
+    try {
+      await fetch(`${apiUrl}/health`, { method: 'GET' });
+    } catch (_) { /* ignore — just a wake ping */ }
+
     setVoiceTranscript('Processing your voice...');
-    
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s for cold starts
 
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
       const formData = new FormData();
 
       if (Platform.OS === 'web') {
@@ -1357,7 +1364,7 @@ export default function Dashboard() {
         console.log("Recorded Audio Blob Size (Web):", audioBlob.size, "bytes, mime:", audioBlob.type);
         
         if (audioBlob.size < 1000) {
-          console.warn("Recorded voice file is empty or extremely quiet! Check browser microphone permissions.");
+          console.warn("Recorded voice file is empty or extremely quiet!");
           setVoiceState('speaking');
           setVoiceTranscript("Microphone recorded no sound. Please check your mic permissions.");
           clearTimeout(timeoutId);
@@ -1371,7 +1378,7 @@ export default function Dashboard() {
         }
         formData.append('audio', audioBlob, 'voice.webm');
       } else {
-        // Native APK / IPA support
+        // Native APK support
         console.log("Recorded Audio URI (Native):", uri);
         formData.append('audio', {
           uri: uri,
@@ -1393,7 +1400,6 @@ export default function Dashboard() {
       });
 
       clearTimeout(timeoutId);
-      const isOk = response.ok;
       let data;
       try {
         data = await response.json();
@@ -1402,28 +1408,24 @@ export default function Dashboard() {
         data = { error: `Server returned status ${response.status}` };
       }
 
-      if (!isOk || data.error) {
+      if (!response.ok || data.error) {
         const errMsg = data.error || `Server error (${response.status})`;
-        setVoiceState('speaking'); // set to speaking briefly to show text
+        setVoiceState('speaking');
         setVoiceTranscript(errMsg);
-        // Wait 4.5 seconds so the user can read the error on screen, then restart
         setTimeout(() => {
           if (voiceModeRef.current) {
             setVoiceState('idle');
-            setTimeout(() => {
-              if (voiceModeRef.current) startRecording();
-            }, 100);
+            setTimeout(() => { if (voiceModeRef.current) startRecording(); }, 100);
           }
         }, 4500);
         return;
       }
 
       // Show what user said
-      const cleanTranscript = (data.transcript || '').replace(/['"]+/g, '').trim();
+      const cleanTranscript = (data.transcript || '').replace(/['\"]+/g, '').trim();
       
       if (cleanTranscript && cleanTranscript.toLowerCase() !== 'not found') {
         setVoiceTranscript(cleanTranscript);
-        // Add user message to chat history
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
           text: cleanTranscript,
@@ -1432,7 +1434,6 @@ export default function Dashboard() {
           status: 'read',
         }]);
       } else {
-        // Fallback if it detected silence despite VAD
         setVoiceTranscript('');
       }
 
@@ -1459,48 +1460,40 @@ export default function Dashboard() {
       } else if (data.reply) {
         setVoiceState('speaking');
         setVoiceTranscript(data.reply);
-        
-        // Try Sarvam frontend fallback first!
         const sarvamB64 = await fetchSarvamTTS(data.reply, i18n.locale);
         if (sarvamB64) {
-          try {
-            await playBase64Audio(sarvamB64);
-          } catch (e) { console.error('Sarvam playback error:', e); }
+          try { await playBase64Audio(sarvamB64); } catch (e) { console.error('Sarvam playback error:', e); }
         } else {
-          // If Sarvam fails (e.g. no API key), fallback to local device TTS
-          try {
-            await playFallbackAudio(data.reply, i18n.locale);
-          } catch (e) { console.error('Fallback playback error:', e); }
+          try { await playFallbackAudio(data.reply, i18n.locale); } catch (e) { console.error('Fallback playback error:', e); }
         }
       }
 
-      // Successfully processed, go to idle and restart listening
       setVoiceState('idle');
       setTimeout(() => {
-        if (voiceModeRef.current) {
-          startRecording();
-        }
+        if (voiceModeRef.current) startRecording();
       }, 100);
 
     } catch (error: any) {
       clearTimeout(timeoutId);
       console.error('Voice chat error:', error);
       const isTimeout = error.name === 'AbortError';
-      const errMsg = isTimeout ? 'Server response timed out. Please try again.' : 'Connection error. Trying again...';
+      const errMsg = isTimeout
+        ? 'Server is waking up... please wait a moment and try again.'
+        : 'Network error. Please check your internet connection.';
       
       setVoiceState('speaking');
       setVoiceTranscript(errMsg);
       
+      // Wait longer before retry so user can read the message
       setTimeout(() => {
         if (voiceModeRef.current) {
           setVoiceState('idle');
-          setTimeout(() => {
-            if (voiceModeRef.current) startRecording();
-          }, 100);
+          // Don't auto-retry on connection errors — let user press mic again
         }
-      }, 4500);
+      }, 5000);
     }
   };
+
 
   const greetAndStart = async () => {
     setVoiceState('processing');
