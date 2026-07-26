@@ -2207,7 +2207,7 @@ export default function Dashboard() {
 
             {messages.map((msg) => (
               <Animated.View key={msg.id} entering={FadeInUp.delay(50).duration(300).springify()}
-                style={[cs.messageBubble, msg.isSender ? cs.sentBubble : cs.receivedBubble, msg.isLocation && { paddingHorizontal: 0, paddingVertical: 0, overflow: 'hidden' }]}>
+                style={[cs.messageBubble, msg.isSender ? cs.sentBubble : cs.receivedBubble]}>
                 
                 {msg.image_base64 && (
                   <Image source={{ uri: msg.image_base64 }} style={cs.messageImage} contentFit="cover" />
@@ -2272,19 +2272,15 @@ export default function Dashboard() {
                     </View>
                   </View>
                 ) : msg.isLocation ? (
-                  <View style={{ width: 240, backgroundColor: 'transparent' }}>
-                    <View 
-                      style={{ width: '100%', height: 130, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e5e7eb' }}
-                    >
-                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: msg.isSender ? 'rgba(252, 134, 90, 0.25)' : 'rgba(16, 185, 129, 0.25)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
-                        <MapPin color={msg.isSender ? "#fc865a" : "#10b981"} size={26} fill={msg.isSender ? "#fc865a" : "#10b981"} />
-                      </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: msg.isSender ? 'rgba(255, 255, 255, 0.15)' : '#f3f4f6', borderRadius: 8, padding: 12, marginBottom: 4, width: 230 }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: msg.isSender ? 'rgba(255, 255, 255, 0.25)' : 'rgba(16, 185, 129, 0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <MapPin color={msg.isSender ? "#ffffff" : "#10b981"} size={20} fill={msg.isSender ? "rgba(255,255,255,0.4)" : "rgba(16, 185, 129, 0.3)"} />
                     </View>
-                    <View style={{ padding: 12, backgroundColor: 'transparent' }}>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: msg.isSender ? '#ffffff' : '#1f2937', marginBottom: 2 }} numberOfLines={1}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: msg.isSender ? '#ffffff' : '#374151' }} numberOfLines={1}>
                         Location Shared
                       </Text>
-                      <Text style={{ fontSize: 13, color: msg.isSender ? 'rgba(255,255,255,0.9)' : '#6b7280' }} numberOfLines={1}>
+                      <Text style={{ fontSize: 13, color: msg.isSender ? 'rgba(255, 255, 255, 0.8)' : '#6b7280', marginTop: 2 }} numberOfLines={1}>
                         {msg.locationLabel || 'Current Location'}
                       </Text>
                     </View>
