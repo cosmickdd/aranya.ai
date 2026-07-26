@@ -66,13 +66,19 @@ async function playBase64Audio(base64: string): Promise<void> {
     const fileUri = `${FileSystem.cacheDirectory}temp_voice_${Date.now()}.wav`;
     let player: any = null;
     try {
+      // CRITICAL: set allowsRecording=false so audio routes to SPEAKER not earpiece
       try {
-        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+        await setAudioModeAsync({
+          allowsRecording: false,
+          playsInSilentMode: true,
+          interruptionMode: 'duckOthers',
+          shouldDuckAndroid: false,
+        });
       } catch (e) {
         console.warn('setAudioModeAsync error:', e);
       }
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-      player = createAudioPlayer(fileUri);
+      player = createAudioPlayer({ uri: fileUri });
       _activeAudioPlayer = player;
       player.play();
       await new Promise<void>((resolve) => {
@@ -94,6 +100,14 @@ async function playBase64Audio(base64: string): Promise<void> {
       }
       try {
         await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      } catch (_) {}
+      // Restore recording-ready audio mode
+      try {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+          interruptionMode: 'mixWithOthers',
+        });
       } catch (_) {}
     }
     return;
@@ -126,14 +140,19 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
     let player: any = null;
     try {
       try {
-        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+        await setAudioModeAsync({
+          allowsRecording: false,
+          playsInSilentMode: true,
+          interruptionMode: 'duckOthers',
+          shouldDuckAndroid: false,
+        });
       } catch (e) {
         console.warn('setAudioModeAsync error:', e);
       }
       const lang = langCode === 'hi' ? 'hi' : 'en';
       const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`;
       
-      player = createAudioPlayer(ttsUrl);
+      player = createAudioPlayer({ uri: ttsUrl });
       _activeAudioPlayer = player;
       player.play();
       await new Promise<void>((resolve) => {
@@ -556,13 +575,18 @@ export default function Dashboard() {
       }
       setPlayingId(msgId);
       if (audioSource.uri) {
-        const player = createAudioPlayer(audioSource.uri);
-        _activeAudioPlayer = player;
         try {
-          await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
+          await setAudioModeAsync({
+            allowsRecording: false,
+            playsInSilentMode: true,
+            interruptionMode: 'duckOthers',
+            shouldDuckAndroid: false,
+          });
         } catch (e) {
           console.warn('setAudioModeAsync error:', e);
         }
+        const player = createAudioPlayer({ uri: audioSource.uri });
+        _activeAudioPlayer = player;
         player.play();
         await new Promise<void>((resolve) => {
           const timeout = setTimeout(resolve, 60000);
