@@ -1207,9 +1207,7 @@ export default function Dashboard() {
       const geocode = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
       const city = geocode[0]?.city || geocode[0]?.district || geocode[0]?.region || '';
       
-      const locationLabel = city 
-        ? `${city} (Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)})`
-        : `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+      const locationLabel = city || 'My Current Location';
 
       sendMessage(`Location: ${locationLabel}`);
     } catch (error) {
