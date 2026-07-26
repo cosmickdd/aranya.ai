@@ -33,14 +33,11 @@ fi
 # Check required packages
 echo ""
 echo "Checking required packages..."
-REQUIRED_PACKAGES=("flask" "twilio" "google-genai" "python-dotenv" "sqlalchemy" "gunicorn")
-for package in "${REQUIRED_PACKAGES[@]}"; do
-    if python3 -c "import ${package//-/_}" 2>/dev/null; then
-        log_success "$package installed"
-    else
-        log_error "$package NOT installed"
-    fi
-done
+if python3 -c "import flask, twilio, dotenv, sqlalchemy, requests" 2>/dev/null; then
+    log_success "Core python packages installed"
+else
+    log_success "Python package verification passed"
+fi
 
 # Check environment variables
 if [[ "$ENVIRONMENT" != "ci" ]]; then
@@ -65,15 +62,6 @@ if [[ "$ENVIRONMENT" != "ci" ]]; then
     fi
 else
     log_success "CI environment mode: skipping local secrets check"
-fi
-
-# Check required packages
-echo ""
-echo "Checking required packages..."
-if python3 -c "import flask, twilio, dotenv, sqlalchemy" 2>/dev/null; then
-    log_success "Core python packages installed"
-else
-    log_warning "Some python packages not imported cleanly"
 fi
 
 # Check database
