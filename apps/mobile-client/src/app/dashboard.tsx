@@ -191,6 +191,214 @@ async function playFallbackAudio(text: string, langCode: string): Promise<void> 
 }
 
 // ═══════════════════════════════════════════════════════
+// PERMISSIONS ONBOARDING MODAL
+// ═══════════════════════════════════════════════════════
+function PermissionsOnboarding({ onDone }: { onDone: () => void }) {
+  const [granting, setGranting] = useState(false);
+  const grantAll = async () => {
+    setGranting(true);
+    try { await requestRecordingPermissionsAsync(); } catch (_) {}
+    try { await Location.requestForegroundPermissionsAsync(); } catch (_) {}
+    setGranting(false);
+    onDone();
+  };
+  const permissions = [
+    { icon: '🎤', title: 'Microphone', desc: 'Voice chat in your language', color: '#10b981' },
+    { icon: '📍', title: 'Location', desc: 'Live weather + nearby soil labs', color: '#3b82f6' },
+    { icon: '📷', title: 'Camera', desc: 'Crop disease photo diagnosis', color: '#f59e0b' },
+  ];
+  return (
+    <Modal transparent animationType="fade" visible statusBarTranslucent>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#0f1923', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <Text style={{ fontSize: 52, marginBottom: 10 }}>🌿</Text>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Aranya ko kaam karne do</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 18 }}>Ye permissions ek baar deni hongi — phir sab automatic</Text>
+          </View>
+          {permissions.map((p, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: p.color + '20', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <Text style={{ fontSize: 22 }}>{p.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>{p.title}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginTop: 2 }}>{p.desc}</Text>
+              </View>
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>
+              </View>
+            </View>
+          ))}
+          <Pressable onPress={grantAll} style={({ pressed }) => ({ backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 16, opacity: pressed ? 0.85 : 1, shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 })}>
+            {granting ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Allow All & Start Chatting 🚀</Text>}
+          </Pressable>
+          <Pressable onPress={onDone} style={{ alignItems: 'center', marginTop: 14 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Skip for now</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// WEATHER CARD (in-chat bubble)
+// ═══════════════════════════════════════════════════════
+function WeatherCard({ weather, onClose }: { weather: any; onClose?: () => void }) {
+  if (!weather) return null;
+  const emoji = weatherEmoji ? weatherEmoji(weather.condition || '') : '🌤️';
+  const rainEntry = weather.forecast?.find((f: any) => f.rain_prob > 50);
+  return (
+    <View style={{ backgroundColor: '#0f2744', borderRadius: 18, padding: 16, marginVertical: 6, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)', shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 5 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ fontSize: 28, marginRight: 10 }}>{emoji}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#60a5fa', fontWeight: '700', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Live Weather</Text>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{weather.location}</Text>
+        </View>
+        {onClose && <Pressable onPress={onClose} style={{ padding: 4 }}><X size={16} color="rgba(255,255,255,0.4)" /></Pressable>}
+      </View>
+      <View style={{ flexDirection: 'row', backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ color: '#93c5fd', fontSize: 11, marginBottom: 2 }}>Temp</Text>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{Math.round(weather.temp)}°C</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>feels {Math.round(weather.feels_like)}°</Text>
+        </View>
+        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ color: '#93c5fd', fontSize: 11, marginBottom: 2 }}>Humidity</Text>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{weather.humidity}%</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{weather.condition}</Text>
+        </View>
+        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ color: '#93c5fd', fontSize: 11, marginBottom: 2 }}>Wind</Text>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{weather.wind_speed?.toFixed(1)}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>m/s</Text>
+        </View>
+      </View>
+      {rainEntry && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+          <Text style={{ fontSize: 16, marginRight: 8 }}>⚠️</Text>
+          <Text style={{ color: '#fca5a5', fontSize: 12, flex: 1 }}>Rain likely ({Math.round(rainEntry.rain_prob)}%) — fertilizer/spray avoid karo!</Text>
+        </View>
+      )}
+      {weather.farming_advice && (
+        <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#10b981' }}>
+          <Text style={{ color: '#6ee7b7', fontSize: 12, lineHeight: 18 }}>🌱 {weather.farming_advice}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// SOIL LABS BOTTOM SHEET
+// ═══════════════════════════════════════════════════════
+function SoilLabsSheet({ visible, labs, portalUrl, onClose }: { visible: boolean; labs: any[]; portalUrl: string; onClose: () => void }) {
+  if (!visible) return null;
+  const openMaps = (lab: any) => {
+    const url = Platform.OS === 'android'
+      ? `geo:${lab.lat},${lab.lon}?q=${encodeURIComponent(lab.name)}`
+      : `maps:${lab.lat},${lab.lon}?q=${encodeURIComponent(lab.name)}`;
+    Linking.openURL(url).catch(() => Linking.openURL(`https://maps.google.com/?q=${lab.lat},${lab.lon}`));
+  };
+  const callLab = (phone: string) => Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, '')}`);
+  return (
+    <Modal transparent animationType="slide" visible={visible} statusBarTranslucent onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={onClose} />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#0f1923', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>🔬 Soil Testing Labs</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 2 }}>Government certified labs near you</Text>
+          </View>
+          <Pressable onPress={onClose}><X size={20} color="rgba(255,255,255,0.5)" /></Pressable>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {labs.length === 0 ? (
+            <View style={{ alignItems: 'center', padding: 40 }}>
+              <Text style={{ fontSize: 48, marginBottom: 12 }}>🔍</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>No labs found nearby. Check the government portal.</Text>
+            </View>
+          ) : labs.map((lab, i) => (
+            <View key={i} style={{ margin: 12, marginTop: i === 0 ? 12 : 0, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                  <Text style={{ fontSize: 18 }}>🏛️</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14, flexWrap: 'wrap' }}>{lab.name}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>{lab.address}</Text>
+                  <Text style={{ color: '#10b981', fontSize: 12, marginTop: 4 }}>📍 {lab.distance_km} km away</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable onPress={() => callLab(lab.phone)} style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 10, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
+                  <Text style={{ color: '#10b981', fontWeight: '600', fontSize: 13 }}>📞 Call</Text>
+                </Pressable>
+                <Pressable onPress={() => openMaps(lab)} style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 10, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
+                  <Text style={{ color: '#60a5fa', fontWeight: '600', fontSize: 13 }}>🗺️ Directions</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+          <Pressable onPress={() => Linking.openURL(portalUrl)} style={({ pressed }) => ({ margin: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', opacity: pressed ? 0.7 : 1 })}>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>🔗 View All Labs on Government Portal</Text>
+          </Pressable>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// SOIL HEALTH CARD MODAL
+// ═══════════════════════════════════════════════════════
+function SoilHealthCardModal({ visible, profile, onClose, onSave }: { visible: boolean; profile: any; onClose: () => void; onSave: (data: any) => void }) {
+  const [cardId, setCardId] = useState(profile?.soilHealthCardId || '');
+  const [nitrogen, setNitrogen] = useState(profile?.soilHealthData?.nitrogen || '');
+  const [phosphorus, setPhosphorus] = useState(profile?.soilHealthData?.phosphorus || '');
+  const [potassium, setPotassium] = useState(profile?.soilHealthData?.potassium || '');
+  const [ph, setPh] = useState(profile?.soilHealthData?.ph || '');
+  const [oc, setOc] = useState(profile?.soilHealthData?.oc || '');
+  return (
+    <Modal transparent animationType="slide" visible={visible} statusBarTranslucent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#0f1923', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18, flex: 1 }}>🌱 Soil Health Card</Text>
+            <Pressable onPress={onClose}><X size={20} color="rgba(255,255,255,0.5)" /></Pressable>
+          </View>
+          <Pressable onPress={() => Linking.openURL('https://www.soilhealth.dac.gov.in/soilhealthcard')} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', opacity: pressed ? 0.7 : 1 })}>
+            <Text style={{ fontSize: 20, marginRight: 10 }}>🏛️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#10b981', fontWeight: '600', fontSize: 14 }}>Get Your Soil Health Card</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>View on Government Portal →</Text>
+            </View>
+          </Pressable>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 12 }}>Or enter your card values manually:</Text>
+          <TextInput value={cardId} onChangeText={setCardId} placeholder="Soil Health Card ID (optional)" placeholderTextColor="rgba(255,255,255,0.25)" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 12, color: '#fff', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {[{label: 'N (Nitrogen)', val: nitrogen, set: setNitrogen, unit: 'kg/ha'},{label: 'P (Phosphorus)', val: phosphorus, set: setPhosphorus, unit: 'kg/ha'},{label: 'K (Potassium)', val: potassium, set: setPotassium, unit: 'kg/ha'},{label: 'pH', val: ph, set: setPh, unit: ''},{label: 'OC %', val: oc, set: setOc, unit: '%'}].map((field, i) => (
+              <View key={i} style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginBottom: 4 }}>{field.label}</Text>
+                <TextInput value={field.val} onChangeText={field.set} placeholder="--" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="numeric" style={{ color: '#10b981', fontWeight: '700', fontSize: 18, padding: 0 }} />
+              </View>
+            ))}
+          </View>
+          <Pressable onPress={() => onSave({ soilHealthCardId: cardId, soilHealthData: { nitrogen, phosphorus, potassium, ph, oc } })} style={({ pressed }) => ({ backgroundColor: '#10b981', borderRadius: 14, paddingVertical: 14, alignItems: 'center', opacity: pressed ? 0.85 : 1 })}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Save & Use for AI Advice 🌱</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════
 type Message = {
@@ -245,6 +453,17 @@ export default function Dashboard() {
   const [reportText, setReportText] = useState('');
   const [showScrollDown, setShowScrollDown] = useState(false);
   const isNearBottomRef = useRef(true);
+
+  // ── Location & Weather ──
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [showWeatherCard, setShowWeatherCard] = useState(false);
+  const [soilLabs, setSoilLabs] = useState<any[]>([]);
+  const [soilLabsPortalUrl, setSoilLabsPortalUrl] = useState('https://www.soilhealth.dac.gov.in/soilTestingLabs');
+  const [showSoilLabs, setShowSoilLabs] = useState(false);
+  const [showSoilHealthCard, setShowSoilHealthCard] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>({});
+  const [showPermissions, setShowPermissions] = useState(false);
 
   // Voice Mode
   const [voiceMode, setVoiceMode] = useState(false);
@@ -552,6 +771,52 @@ export default function Dashboard() {
     AsyncStorage.setItem('aranya_chat_history', JSON.stringify(messages)).catch(() => {});
   }, [messages]);
 
+  // ── Startup: permissions, profile, location, weather ──
+  useEffect(() => {
+    const init = async () => {
+      try {
+        // 1. Load user profile
+        const profile = await loadUserProfile();
+        setUserProfile(profile);
+
+        // 2. Show permissions onboarding if first time
+        if (!profile.permissionsShown) {
+          setShowPermissions(true);
+        } else {
+          // Already shown, silently fetch location
+          fetchLocationAndWeather();
+        }
+      } catch (e) {
+        console.error('Dashboard init error:', e);
+      }
+    };
+    init();
+  }, []);
+
+  const fetchLocationAndWeather = async () => {
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude: lat, longitude: lon } = loc.coords;
+      setUserLocation({ lat, lon });
+      await saveUserProfile({ lat, lon });
+
+      // Fetch weather in background
+      const weather = await fetchWeather(lat, lon);
+      if (weather) setWeatherData(weather);
+
+      // Pre-fetch soil labs
+      const labsResult = await fetchSoilLabs(lat, lon, 5);
+      if (labsResult) {
+        setSoilLabs(labsResult.labs || []);
+        setSoilLabsPortalUrl(labsResult.portal_url || soilLabsPortalUrl);
+      }
+    } catch (e) {
+      console.error('fetchLocationAndWeather error:', e);
+    }
+  };
+
   // Call timer
   useEffect(() => {
     if (!voiceMode) return;
@@ -757,6 +1022,11 @@ export default function Dashboard() {
           image_base64: imgB64,
           doc_base64: docAttachment?.base64 || undefined,
           doc_mime: docAttachment?.mimeType || 'application/pdf',
+          // Location context — gives AI hyper-local weather awareness
+          lat: userLocation?.lat,
+          lon: userLocation?.lon,
+          // Soil health card data for personalized fertilizer advice
+          soil_health_data: userProfile?.soilHealthData || undefined,
         }),
       });
       const data = await response.json();
@@ -1533,6 +1803,37 @@ export default function Dashboard() {
   // ═══════════════════════════════════════════════════════
   return (
     <SafeAreaView style={cs.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      {/* Permissions Onboarding — shown once on first launch */}
+      {showPermissions && (
+        <PermissionsOnboarding onDone={async () => {
+          setShowPermissions(false);
+          await saveUserProfile({ permissionsShown: true });
+          await fetchLocationAndWeather();
+        }} />
+      )}
+
+      {/* Soil Labs Bottom Sheet */}
+      <SoilLabsSheet
+        visible={showSoilLabs}
+        labs={soilLabs}
+        portalUrl={soilLabsPortalUrl}
+        onClose={() => setShowSoilLabs(false)}
+      />
+
+      {/* Soil Health Card Modal */}
+      <SoilHealthCardModal
+        visible={showSoilHealthCard}
+        profile={userProfile}
+        onClose={() => setShowSoilHealthCard(false)}
+        onSave={async (data) => {
+          const updated = { ...userProfile, ...data };
+          setUserProfile(updated);
+          await saveUserProfile(data);
+          setShowSoilHealthCard(false);
+          Alert.alert('✅ Saved!', 'Soil health data saved. Aranya will now give you personalised fertilizer advice!');
+        }}
+      />
+
       <KeyboardAvoidingView style={cs.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Header */}
         <View style={cs.header}>
@@ -1550,6 +1851,48 @@ export default function Dashboard() {
             </View>
           </View>
           <View style={cs.headerRight}>
+            {/* Live weather badge */}
+            {weatherData && (
+              <Pressable
+                onPress={() => setShowWeatherCard(v => !v)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row', alignItems: 'center',
+                  backgroundColor: 'rgba(59,130,246,0.15)',
+                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+                  marginRight: 6, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)',
+                  opacity: pressed ? 0.8 : 1,
+                })}>
+                <Text style={{ fontSize: 14, marginRight: 4 }}>🌡️</Text>
+                <Text style={{ color: '#93c5fd', fontWeight: '700', fontSize: 13 }}>{Math.round(weatherData.temp)}°</Text>
+              </Pressable>
+            )}
+            {/* Soil labs quick button */}
+            <Pressable
+              onPress={async () => {
+                if (soilLabs.length === 0 && userLocation) {
+                  const result = await fetchSoilLabs(userLocation.lat, userLocation.lon, 5);
+                  if (result) { setSoilLabs(result.labs || []); setSoilLabsPortalUrl(result.portal_url || soilLabsPortalUrl); }
+                }
+                setShowSoilLabs(true);
+              }}
+              style={({ pressed }) => ({
+                backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 20, padding: 7,
+                marginRight: 4, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
+                opacity: pressed ? 0.8 : 1,
+              })}>
+              <Text style={{ fontSize: 16 }}>🔬</Text>
+            </Pressable>
+            {/* Soil health card button */}
+            <Pressable
+              onPress={() => setShowSoilHealthCard(true)}
+              style={({ pressed }) => ({
+                backgroundColor: userProfile?.soilHealthData?.nitrogen ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.08)',
+                borderRadius: 20, padding: 7, marginRight: 4,
+                borderWidth: 1, borderColor: userProfile?.soilHealthData?.nitrogen ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)',
+                opacity: pressed ? 0.8 : 1,
+              })}>
+              <Text style={{ fontSize: 16 }}>🌱</Text>
+            </Pressable>
             <Pressable style={cs.phoneButton} onPress={toggleVoiceMode}>
               <Phone color="#000" size={22} />
             </Pressable>
@@ -1638,6 +1981,13 @@ export default function Dashboard() {
             <View style={cs.dateBadgeContainer}>
               <View style={cs.dateBadge}><Text style={cs.dateText}>Today</Text></View>
             </View>
+
+            {/* Expandable Weather Card — shown when user taps temp badge */}
+            {showWeatherCard && weatherData && (
+              <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: 12 }}>
+                <WeatherCard weather={weatherData} onClose={() => setShowWeatherCard(false)} />
+              </Animated.View>
+            )}
 
             {messages.map((msg) => (
               <Animated.View key={msg.id} entering={FadeInUp.delay(50).duration(300).springify()}

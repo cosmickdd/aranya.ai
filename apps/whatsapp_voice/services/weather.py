@@ -97,6 +97,59 @@ def get_weather(location: str) -> dict:
         return _fallback_weather(location)
 
 
+def get_weather_by_coords(lat: float, lon: float) -> dict:
+    """
+    Get current weather + forecast using GPS coordinates directly.
+    Faster than get_weather() — no geocoding step needed.
+    Used by the mobile app which already has the user's GPS location.
+    """
+    if not OWM_API_KEY:
+        return _fallback_weather("your location")
+
+    try:
+        current_resp = requests.get(
+            f"{OWM_BASE}/weather",
+            params={"lat": lat, "lon": lon, "appid": OWM_API_KEY, "units": "metric"},
+            timeout=6,
+        )
+        current_resp.raise_for_status()
+        current = current_resp.json()
+
+        forecast_resp = requests.get(
+            f"{OWM_BASE}/forecast",
+            params={"lat": lat, "lon": lon, "appid": OWM_API_KEY, "units": "metric", "cnt": 8},
+            timeout=6,
+        )
+        forecast_resp.raise_for_status()
+        forecast_data = forecast_resp.json()
+
+        location_name = current.get("name", f"{lat:.2f},{lon:.2f}")
+
+        weather = {
+            "location":    location_name,
+            "lat":         lat,
+            "lon":         lon,
+            "temp":        current["main"]["temp"],
+            "feels_like":  current["main"]["feels_like"],
+            "humidity":    current["main"]["humidity"],
+            "condition":   current["weather"][0]["description"],
+            "icon":        current["weather"][0]["icon"],
+            "wind_speed":  current["wind"]["speed"],
+            "rain_1h":     current.get("rain", {}).get("1h", 0),
+            "forecast":    _parse_forecast(forecast_data),
+            "live":        True,
+        }
+
+        weather["summary"] = _build_weather_summary(weather)
+        weather["farming_advice"] = _farming_advice(weather)
+        return weather
+
+    except Exception as e:
+        logger.warning(f"Weather by coords error ({lat},{lon}): {e}")
+        return _fallback_weather("your location")
+
+
+
 def _resolve_location(location: str):
     """Get lat/lon for a location using geocoding or our cache."""
     loc_lower = location.lower().strip()

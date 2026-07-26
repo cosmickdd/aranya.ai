@@ -246,6 +246,52 @@ def test_call():
     return jsonify({"success": False, "error": "Call failed — check logs"}), 500
 
 
+
+@app.route("/api/weather", methods=["GET", "OPTIONS"])
+def api_weather():
+    """
+    GET /api/weather?lat=25.31&lon=82.97
+    Returns live weather + farming advice for the given GPS coordinates.
+    """
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        lat = float(request.args.get("lat", 0))
+        lon = float(request.args.get("lon", 0))
+        if not lat or not lon:
+            return jsonify({"error": "lat and lon required"}), 400
+
+        from services.weather import get_weather_by_coords
+        weather = get_weather_by_coords(lat, lon)
+        return jsonify(weather)
+    except Exception as e:
+        logger.error(f"/api/weather error: {e}")
+        return jsonify({"error": "Failed to fetch weather"}), 500
+
+
+@app.route("/api/soil-labs", methods=["GET", "OPTIONS"])
+def api_soil_labs():
+    """
+    GET /api/soil-labs?lat=25.31&lon=82.97&limit=5
+    Returns nearby government soil testing labs sorted by distance.
+    """
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        lat = float(request.args.get("lat", 0))
+        lon = float(request.args.get("lon", 0))
+        limit = int(request.args.get("limit", 5))
+        if not lat or not lon:
+            return jsonify({"error": "lat and lon required"}), 400
+
+        from services.soil_labs import get_nearby_labs
+        labs = get_nearby_labs(lat, lon, limit=limit)
+        return jsonify({"labs": labs, "portal_url": "https://www.soilhealth.dac.gov.in/soilTestingLabs"})
+    except Exception as e:
+        logger.error(f"/api/soil-labs error: {e}")
+        return jsonify({"error": "Failed to fetch soil labs"}), 500
+
+
 @app.route("/api/chat", methods=["POST", "OPTIONS"])
 @limiter.limit("30 per minute", methods=["POST"])
 def api_chat():
@@ -264,6 +310,9 @@ def api_chat():
     image_base64 = data.get("image_base64", None)
     doc_base64 = data.get("doc_base64", None)
     doc_mime = data.get("doc_mime", "application/pdf")
+    lat = data.get("lat", None)
+    lon = data.get("lon", None)
+    soil_health_data = data.get("soil_health_data", None)
     
     if not msg and not image_base64 and not doc_base64:
         return jsonify({"error": "Missing message, image, or document"}), 400
@@ -302,7 +351,38 @@ def api_chat():
         gemini_input = msg or ("Analyze this image." if image_base64 else "What is in this document?")
         if image_base64 or doc_base64:
             gemini_input += " (Focus strictly on agriculture/farming. If this image or document is off-topic, decline to answer.)"
-        
+
+        # Inject live GPS weather context if coordinates provided
+        if lat and lon:
+            try:
+                from services.weather import get_weather_by_coords
+                weather = get_weather_by_coords(float(lat), float(lon))
+                if weather.get("live"):
+                    gemini_input += (
+                        f"\n\n[FARMER'S LIVE LOCATION CONTEXT]\n"
+                        f"Location: {weather['location']}\n"
+                        f"Current Weather: {weather['condition'].title()}, {weather['temp']:.0f}°C, "
+                        f"Humidity: {weather['humidity']}%, Wind: {weather['wind_speed']:.1f} m/s\n"
+                        f"Farming Advice: {weather['farming_advice']}"
+                    )
+            except Exception as we:
+                logger.warning(f"Weather context injection failed: {we}")
+
+        # Inject soil health card data if provided
+        if soil_health_data:
+            try:
+                gemini_input += (
+                    f"\n\n[FARMER'S SOIL HEALTH DATA]\n"
+                    f"N (Nitrogen): {soil_health_data.get('nitrogen', 'N/A')} kg/ha\n"
+                    f"P (Phosphorus): {soil_health_data.get('phosphorus', 'N/A')} kg/ha\n"
+                    f"K (Potassium): {soil_health_data.get('potassium', 'N/A')} kg/ha\n"
+                    f"pH: {soil_health_data.get('ph', 'N/A')}\n"
+                    f"OC (Organic Carbon): {soil_health_data.get('oc', 'N/A')}%\n"
+                    f"Use this soil data to give precise fertilizer and crop recommendations."
+                )
+            except Exception as se:
+                logger.warning(f"Soil health context injection failed: {se}")
+
         # Step 2: Get AI response from Gemini directly in target language
         ai_text = generate_response(
             phone_id=user_id, 
