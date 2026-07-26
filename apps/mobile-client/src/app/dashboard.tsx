@@ -53,7 +53,7 @@ async function stopActiveAudio(): Promise<void> {
 async function playBase64Audio(base64: string): Promise<void> {
   if (Platform.OS !== 'web') {
     const FileSystem = require('expo-file-system');
-    const fileUri = `${FileSystem.cacheDirectory}temp_voice_${Date.now()}.mp3`;
+    const fileUri = `${FileSystem.cacheDirectory}temp_voice_${Date.now()}.wav`;
     let player: any = null;
     try {
       try {

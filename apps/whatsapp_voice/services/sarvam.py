@@ -151,21 +151,21 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
         import io
         import subprocess
 
-        # If input is webm, convert it to wav using ffmpeg (which is pre-installed)
-        if "webm" in mime_type or mime_type == "audio/webm":
-            logger.info("Converting webm audio to wav format using ffmpeg file-transcoding...")
+        # Transcode any incoming audio (m4a, caf, webm, 3gp, etc.) to 16kHz mono WAV using ffmpeg
+        if not (mime_type == "audio/wav" and len(audio_bytes) > 44 and audio_bytes[:4] == b'RIFF'):
+            logger.info(f"Transcoding input audio ({mime_type}, {len(audio_bytes)} bytes) to 16kHz WAV using ffmpeg...")
             import tempfile
             temp_in_name = None
             temp_out_name = None
             try:
-                # Write to temp file to make it seekable for ffmpeg
-                with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_in:
+                suffix = ".m4a" if "m4a" in mime_type else (".webm" if "webm" in mime_type else ".raw")
+                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_in:
                     temp_in.write(audio_bytes)
                     temp_in_name = temp_in.name
                 
                 temp_out_name = temp_in_name + ".wav"
                 
-                # Run ffmpeg reading from file and writing to file (single-threaded for memory safety)
+                # Convert to 16kHz mono WAV for Sarvam STT
                 cmd = ["ffmpeg", "-y", "-i", temp_in_name, "-f", "wav", "-ar", "16000", "-ac", "1", "-vn", temp_out_name]
                 process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
@@ -178,9 +178,8 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
                     err_msg = process.stderr.decode('utf-8', errors='ignore')
                     logger.error(f"ffmpeg conversion failed: {err_msg}")
             except Exception as ffmpeg_err:
-                logger.error(f"Failed to transcode webm using ffmpeg: {ffmpeg_err}")
+                logger.error(f"Failed to transcode audio using ffmpeg: {ffmpeg_err}")
             finally:
-                # Clean up temporary files
                 if temp_in_name and os.path.exists(temp_in_name):
                     try:
                         os.remove(temp_in_name)
@@ -192,17 +191,9 @@ def speech_to_text(audio_bytes: bytes, language: str = "hi", mime_type: str = "a
                     except Exception:
                         pass
 
-        if "webm" in mime_type:
-            ext = "webm"
-        elif "m4a" in mime_type or "mp4" in mime_type:
-            ext = "m4a"
-        elif "caf" in mime_type:
-            ext = "caf"
-        else:
-            ext = "wav"
-            
+        ext = "wav"
         files = {
-            "file": (f"audio.{ext}", io.BytesIO(audio_bytes), mime_type),
+            "file": (f"audio.{ext}", io.BytesIO(audio_bytes), "audio/wav"),
         }
         data = {
             "language_code": lang_code,
