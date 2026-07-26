@@ -780,11 +780,14 @@ export default function Dashboard() {
       }
 
       let permission = await requestRecordingPermissionsAsync();
-      if (!permission.granted && AudioModule?.requestRecordingPermissionsAsync) {
+      let isGranted = permission.status === 'granted' || permission.granted === true;
+
+      if (!isGranted && AudioModule?.requestRecordingPermissionsAsync) {
         permission = await AudioModule.requestRecordingPermissionsAsync();
+        isGranted = permission.status === 'granted' || permission.granted === true;
       }
 
-      if (!permission.granted) {
+      if (!isGranted) {
         Alert.alert(
           'Microphone Permission Required',
           'Aranya needs microphone access for voice chat. Please enable Microphone permissions for Aranya AI in your phone Settings -> Apps -> Aranya AI -> Permissions.',
