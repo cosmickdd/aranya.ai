@@ -1,4 +1,4 @@
-﻿// src/lib/weather.ts — Weather & Soil Labs API client
+// src/lib/weather.ts — Weather & Soil Labs API client
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://aranya-ai-6r0j.onrender.com';
 
 export interface WeatherData {
@@ -28,11 +28,12 @@ export async function fetchSoilLabs(lat: number, lon: number, limit = 5): Promis
 
 export function weatherEmoji(condition: string): string {
   const c = condition.toLowerCase();
-  if (c.includes('thunder')) return 'u26C8uFE0F';
-  if (c.includes('rain') || c.includes('drizzle')) return 'u1F327uFE0F';
-  if (c.includes('snow')) return 'u2744uFE0F';
-  if (c.includes('mist') || c.includes('fog') || c.includes('haze')) return 'u1F32BuFE0F';
-  if (c.includes('cloud')) return c.includes('few') || c.includes('scatter') ? 'u26C5' : 'u2601uFE0F';
-  if (c.includes('clear') || c.includes('sunny')) return 'u2600uFE0F';
-  return 'u1F324uFE0F';
+  if (c.includes('thunder')) return '⛈️';
+  if (c.includes('rain') || c.includes('drizzle')) return '🌧️';
+  if (c.includes('snow')) return '❄️';
+  if (c.includes('mist') || c.includes('fog') || c.includes('haze')) return '🌫️';
+  if (c.includes('cloud')) return c.includes('few') || c.includes('scatter') ? '⛅' : '☁️';
+  if (c.includes('clear') || c.includes('sunny')) return '☀️';
+  return '🌤️';
 }
+
