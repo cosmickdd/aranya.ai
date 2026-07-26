@@ -1,5 +1,5 @@
 """
-services/soil_labs.py — Soil Testing Labs finder using government data.
+services/soil_labs.py -- Soil Testing Labs finder using government data.
 
 Data sourced from: https://www.soilhealth.dac.gov.in/soilTestingLabs
 Returns nearby labs sorted by approximate distance from user GPS coordinates.
@@ -120,4 +120,4 @@ def get_nearby_labs(lat: float, lon: float, limit: int = 5) -> list:
         if state_labs:
             return state_labs[:limit]
 
-    return labs_with_distance[:limit]
+    return labs_with_distance[:limit]
