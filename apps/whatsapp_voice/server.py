@@ -256,13 +256,13 @@ def api_weather():
     if request.method == "OPTIONS":
         return ("", 204)
     try:
-        lat = float(request.args.get("lat", 0))
-        lon = float(request.args.get("lon", 0))
+        lat = request.args.get("lat")
+        lon = request.args.get("lon")
         if not lat or not lon:
-            return jsonify({"error": "lat and lon required"}), 400
+            return jsonify({"error": "Missing lat/lon"}), 400
 
         from services.weather import get_weather_by_coords
-        weather = get_weather_by_coords(lat, lon)
+        weather = get_weather_by_coords(float(lat), float(lon))
         return jsonify(weather)
     except Exception as e:
         logger.error(f"/api/weather error: {e}")
@@ -372,7 +372,7 @@ def api_chat():
                 from services.soil_labs import get_nearby_labs
                 labs = get_nearby_labs(float(lat), float(lon), limit=2)
                 if labs:
-                    lab_details = "\n".join([f"- {l['name']} (Distance: {l['distance_km']} km) - Phone: {l.get('mobile', 'N/A')}, Address: {l['address']}, Portal URL: {l['portal_url']}" for l in labs])
+                    lab_details = "\n".join([f"- {l['name']} (Distance: {l['distance_km']} km) - Phone: {l.get('mobile', 'N/A')}, Address: {l['address']}, Portal URL: {l.get('portal_url', 'N/A')}" for l in labs])
                     gemini_input += (
                         f"\n\n[NEARBY SOIL TESTING LABS CONTEXT]\n"
                         f"If the farmer asks about soil testing or where to test their soil, use this data to suggest the nearest labs:\n"
@@ -481,7 +481,7 @@ def api_voice_chat():
                 from services.soil_labs import get_nearby_labs
                 labs = get_nearby_labs(float(lat), float(lon), limit=2)
                 if labs:
-                    lab_details = "\n".join([f"- {l['name']} (Distance: {l['distance_km']} km) - Phone: {l.get('mobile', 'N/A')}, Address: {l['address']}, Portal URL: {l['portal_url']}" for l in labs])
+                    lab_details = "\n".join([f"- {l['name']} (Distance: {l['distance_km']} km) - Phone: {l.get('mobile', 'N/A')}, Address: {l['address']}, Portal URL: {l.get('portal_url', 'N/A')}" for l in labs])
                     gemini_input += (
                         f"\n\n[NEARBY SOIL TESTING LABS CONTEXT]\n"
                         f"If the farmer asks about soil testing or where to test their soil, use this data to suggest the nearest labs:\n"
