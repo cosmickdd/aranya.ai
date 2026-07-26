@@ -2273,15 +2273,13 @@ export default function Dashboard() {
                   </View>
                 ) : msg.isLocation ? (
                   <View style={{ width: 240, overflow: 'hidden', borderRadius: 12, backgroundColor: msg.isSender ? '#059669' : '#ffffff', borderWidth: 1, borderColor: msg.isSender ? '#047857' : '#e5e7eb' }}>
-                    <ImageBackground 
-                      source={{ uri: 'https://i.ibb.co/n0N1tWz/map-placeholder.jpg' }} 
+                    <View 
                       style={{ width: '100%', height: 130, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e5e7eb' }}
-                      imageStyle={{ opacity: 0.8 }}
                     >
                       <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(16, 185, 129, 0.25)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
                         <MapPin color="#059669" size={26} fill="#10b981" />
                       </View>
-                    </ImageBackground>
+                    </View>
                     <View style={{ padding: 12, backgroundColor: msg.isSender ? '#10b981' : '#ffffff' }}>
                       <Text style={{ fontSize: 15, fontWeight: '700', color: msg.isSender ? '#ffffff' : '#1f2937', marginBottom: 2 }} numberOfLines={1}>
                         Location Shared
