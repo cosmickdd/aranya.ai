@@ -1618,6 +1618,10 @@ export default function Dashboard() {
 
       formData.append('language', i18n.locale || 'hi');
       formData.append('user_id', 'demo_user_123');
+      if (userLocation?.lat && userLocation?.lon) {
+        formData.append('lat', userLocation.lat.toString());
+        formData.append('lon', userLocation.lon.toString());
+      }
 
       const response = await fetch(`${apiUrl}/api/voice-chat`, {
         method: 'POST',

@@ -368,6 +368,20 @@ def api_chat():
             except Exception as we:
                 logger.warning(f"Weather context injection failed: {we}")
 
+            try:
+                from services.soil_labs import get_nearby_labs
+                labs = get_nearby_labs(float(lat), float(lon), limit=2)
+                if labs:
+                    lab_details = "\n".join([f"- {l['name']} (Distance: {l['distance_km']} km) - Phone: {l.get('mobile', 'N/A')}, Address: {l['address']}, Portal URL: {l['portal_url']}" for l in labs])
+                    gemini_input += (
+                        f"\n\n[NEARBY SOIL TESTING LABS CONTEXT]\n"
+                        f"If the farmer asks about soil testing or where to test their soil, use this data to suggest the nearest labs:\n"
+                        f"{lab_details}\n"
+                        f"Tell them to visit the portal for more info: https://www.soilhealth.dac.gov.in/soilTestingLabs"
+                    )
+            except Exception as se:
+                logger.warning(f"Soil labs context injection failed: {se}")
+
         # Inject soil health card data if provided
         if soil_health_data:
             try:
@@ -421,6 +435,8 @@ def api_voice_chat():
 
     language = request.form.get("language", "hi")
     user_id = request.form.get("user_id", "anonymous_voice_user")
+    lat = request.form.get("lat")
+    lon = request.form.get("lon")
 
     # Extract API key if delegated by client
     api_key = request.headers.get("X-Sarvam-API-Key") or request.form.get("sarvam_api_key")
@@ -443,10 +459,42 @@ def api_voice_chat():
             return jsonify({"error": f"Could not understand audio. (WAV size: {len(audio_bytes)} bytes). Please speak clearly or check microphone."}), 400
         logger.info(f"STT transcript: {transcript}")
 
+        gemini_input = transcript
+        
+        # Inject live GPS context if coordinates provided
+        if lat and lon:
+            try:
+                from services.weather import get_weather_by_coords
+                weather = get_weather_by_coords(float(lat), float(lon))
+                if weather.get("live"):
+                    gemini_input += (
+                        f"\n\n[FARMER'S LIVE LOCATION CONTEXT]\n"
+                        f"Location: {weather['location']}\n"
+                        f"Current Weather: {weather['condition'].title()}, {weather['temp']:.0f}°C, "
+                        f"Humidity: {weather['humidity']}%, Wind: {weather['wind_speed']:.1f} m/s\n"
+                        f"Farming Advice: {weather['farming_advice']}"
+                    )
+            except Exception as we:
+                logger.warning(f"Weather context injection failed: {we}")
+
+            try:
+                from services.soil_labs import get_nearby_labs
+                labs = get_nearby_labs(float(lat), float(lon), limit=2)
+                if labs:
+                    lab_details = "\n".join([f"- {l['name']} (Distance: {l['distance_km']} km) - Phone: {l.get('mobile', 'N/A')}, Address: {l['address']}, Portal URL: {l['portal_url']}" for l in labs])
+                    gemini_input += (
+                        f"\n\n[NEARBY SOIL TESTING LABS CONTEXT]\n"
+                        f"If the farmer asks about soil testing or where to test their soil, use this data to suggest the nearest labs:\n"
+                        f"{lab_details}\n"
+                        f"Tell them to visit the portal for more info: https://www.soilhealth.dac.gov.in/soilTestingLabs"
+                    )
+            except Exception as se:
+                logger.warning(f"Soil labs context injection failed: {se}")
+
         # Step 2: Gemini AI response directly in target language (bypassing input translation)
         ai_text = generate_response(
             phone_id=user_id,
-            user_text=transcript,
+            user_text=gemini_input,
             voice_mode=True,
             language=language,
         )
