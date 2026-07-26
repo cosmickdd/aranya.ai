@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, KeyboardAvoid
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw, FileText, MapPin } from 'lucide-react-native';
+import { Phone, Paperclip, Camera as CameraIcon, Send, Check, CheckCheck, X, Mic, Volume2, PhoneOff, Play, Pause, MoreVertical, Trash2, Flag, LogOut, ChevronDown, Lock, MicOff, MessageSquare, Zap, ZapOff, Image as ImageIcon, RotateCw, FileText, MapPin, CloudSun, TestTube, Leaf, Navigation, ExternalLink, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn, FadeInDown, ZoomIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, interpolate } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets, createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
@@ -14,7 +14,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 import i18n from '../lib/i18n';
 import { fetchSarvamTTS } from '../lib/sarvam';
-import { logoutUser } from '../lib/firebase';
+import { fetchWeather, fetchSoilLabs, weatherEmoji } from '../lib/weather';
+import { loadUserProfile, saveUserProfile } from '../lib/userProfile';
 
 // ═══════════════════════════════════════════════════════
 // AUDIO HELPERS — cross-platform (Web Audio API on web, expo-av on native)
