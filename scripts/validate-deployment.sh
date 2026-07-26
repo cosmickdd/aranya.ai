@@ -67,6 +67,15 @@ else
     log_success "CI environment mode: skipping local secrets check"
 fi
 
+# Check required packages
+echo ""
+echo "Checking required packages..."
+if python3 -c "import flask, twilio, dotenv, sqlalchemy" 2>/dev/null; then
+    log_success "Core python packages installed"
+else
+    log_warning "Some python packages not imported cleanly"
+fi
+
 # Check database
 echo ""
 echo "Checking database..."
@@ -84,25 +93,25 @@ if command -v docker &> /dev/null; then
     if [[ -f "Dockerfile" ]]; then
         log_success "Dockerfile exists"
     else
-        log_error "Dockerfile NOT found"
+        log_warning "Dockerfile not in root"
     fi
 else
-    log_warning "Docker not installed (OK for App Service with ZIP deploy)"
+    log_warning "Docker not installed (OK for App Service / Render with Git deploy)"
 fi
 
 # Check Azure tools
 echo ""
-echo "Checking Azure deployment tools..."
+echo "Checking deployment tools..."
 if command -v az &> /dev/null; then
     log_success "Azure CLI is installed"
 else
-    log_warning "Azure CLI not installed — needed for deployment"
+    log_warning "Azure CLI not installed"
 fi
 
 if command -v azd &> /dev/null; then
     log_success "Azure Developer CLI is installed"
 else
-    log_warning "Azure Developer CLI not installed — install from https://aka.ms/azd"
+    log_warning "Azure Developer CLI not installed"
 fi
 
 # Check infrastructure files
@@ -111,13 +120,13 @@ echo "Checking infrastructure files..."
 if [[ -f "infra/main.bicep" ]]; then
     log_success "Bicep template exists"
 else
-    log_error "Bicep template NOT found"
+    log_warning "Bicep template not present (OK for Render deploy)"
 fi
 
 if [[ -f "azure.yaml" ]]; then
     log_success "azure.yaml configuration found"
 else
-    log_error "azure.yaml NOT found"
+    log_warning "azure.yaml not present (OK for Render deploy)"
 fi
 
 # Final status
