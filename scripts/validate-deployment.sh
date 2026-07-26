@@ -43,26 +43,28 @@ for package in "${REQUIRED_PACKAGES[@]}"; do
 done
 
 # Check environment variables
-echo ""
-echo "Checking environment variables..."
-REQUIRED_VARS=("TWILIO_ACCOUNT_SID" "TWILIO_AUTH_TOKEN" "TWILIO_PHONE_NUMBER" "GEMINI_API_KEY" "PUBLIC_URL")
-for var in "${REQUIRED_VARS[@]}"; do
-    if [[ -z "${!var}" ]]; then
-        log_error "$var is NOT set"
-    else
-        log_success "$var is set"
-    fi
-done
+if [[ "$ENVIRONMENT" != "ci" ]]; then
+    echo ""
+    echo "Checking environment variables..."
+    REQUIRED_VARS=("TWILIO_ACCOUNT_SID" "TWILIO_AUTH_TOKEN" "TWILIO_PHONE_NUMBER" "GEMINI_API_KEY" "PUBLIC_URL")
+    for var in "${REQUIRED_VARS[@]}"; do
+        if [[ -z "${!var}" ]]; then
+            log_error "$var is NOT set"
+        else
+            log_success "$var is set"
+        fi
+    done
 
-# Check .env file
-echo ""
-echo "Checking .env file..."
-if [[ -f "whatsapp_voice/.env" ]]; then
-    log_success ".env file exists"
-    VAR_COUNT=$(grep -c "^[A-Z_]" whatsapp_voice/.env || echo "0")
-    log_success "  Found $VAR_COUNT variables configured"
+    # Check .env file
+    echo ""
+    echo "Checking .env file..."
+    if [[ -f "whatsapp_voice/.env" ]] || [[ -f "apps/whatsapp_voice/.env" ]]; then
+        log_success ".env file exists"
+    else
+        log_error ".env file NOT found — copy from .env.example"
+    fi
 else
-    log_error ".env file NOT found — copy from .env.example"
+    log_success "CI environment mode: skipping local secrets check"
 fi
 
 # Check database

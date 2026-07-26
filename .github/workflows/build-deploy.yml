@@ -32,15 +32,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r whatsapp_voice/requirements.txt
+          pip install -r apps/whatsapp_voice/requirements.txt
       
       - name: Run validation
-        run: bash validate-deployment.sh dev
+        run: bash scripts/validate-deployment.sh ci
       
       - name: Lint with pylint
         run: |
           pip install pylint
-          pylint whatsapp_voice --exit-zero || true
+          pylint apps/whatsapp_voice --exit-zero || true
   
   build:
     runs-on: ubuntu-latest
