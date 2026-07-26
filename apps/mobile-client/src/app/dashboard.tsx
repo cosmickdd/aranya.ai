@@ -646,6 +646,8 @@ type Message = {
   isDocument?: boolean;
   doc_name?: string;
   doc_uri?: string;
+  isLocation?: boolean;
+  locationLabel?: string;
 };
 
 // ═══════════════════════════════════════════════════════
@@ -1209,15 +1211,15 @@ export default function Dashboard() {
       
       const locationLabel = city || 'My Current Location';
 
-      sendMessage(`Location: ${locationLabel}`);
+      sendMessage(`Location: ${locationLabel}`, null, null, true, locationLabel);
     } catch (error) {
       console.error('Location share error:', error);
     }
   };
 
   // ── Send Message (shared by chat and voice) ──
-  const sendMessage = useCallback(async (text: string, imgB64?: string | null, docAttachment?: { uri: string; name: string; mimeType?: string; base64?: string } | null) => {
-    if (!text.trim() && !imgB64 && !docAttachment) return;
+  const sendMessage = useCallback(async (text: string, imgB64?: string | null, docAttachment?: { uri: string; name: string; mimeType?: string; base64?: string } | null, isLocation?: boolean, locationLabel?: string) => {
+    if (!text.trim() && !imgB64 && !docAttachment && !isLocation) return;
 
     const newMsg: Message = {
       id: Date.now().toString(),
@@ -1229,6 +1231,8 @@ export default function Dashboard() {
       isDocument: !!docAttachment,
       doc_name: docAttachment?.name,
       doc_uri: docAttachment?.uri,
+      isLocation,
+      locationLabel,
     };
     setMessages(prev => [...prev, newMsg]);
     setIsTyping(true);
@@ -2265,6 +2269,26 @@ export default function Dashboard() {
                           {playingId === msg.id ? 'Playing' : msg.voiceDuration ? formatDuration(msg.voiceDuration) : '0:00'}
                         </Text>
                       </View>
+                    </View>
+                  </View>
+                ) : msg.isLocation ? (
+                  <View style={{ width: 240, overflow: 'hidden', borderRadius: 12, backgroundColor: msg.isSender ? '#059669' : '#ffffff', borderWidth: 1, borderColor: msg.isSender ? '#047857' : '#e5e7eb' }}>
+                    <ImageBackground 
+                      source={{ uri: 'https://i.ibb.co/n0N1tWz/map-placeholder.jpg' }} 
+                      style={{ width: '100%', height: 130, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e5e7eb' }}
+                      imageStyle={{ opacity: 0.8 }}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(16, 185, 129, 0.25)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
+                        <MapPin color="#059669" size={26} fill="#10b981" />
+                      </View>
+                    </ImageBackground>
+                    <View style={{ padding: 12, backgroundColor: msg.isSender ? '#10b981' : '#ffffff' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: msg.isSender ? '#ffffff' : '#1f2937', marginBottom: 2 }} numberOfLines={1}>
+                        Location Shared
+                      </Text>
+                      <Text style={{ fontSize: 13, color: msg.isSender ? '#d1fae5' : '#6b7280' }} numberOfLines={1}>
+                        {msg.locationLabel || 'Current Location'}
+                      </Text>
                     </View>
                   </View>
                 ) : (
