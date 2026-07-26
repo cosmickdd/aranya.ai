@@ -203,45 +203,107 @@ function PermissionsOnboarding({ onDone }: { onDone: () => void }) {
     setGranting(false);
     onDone();
   };
+
   const permissions = [
-    { icon: '🎤', title: 'Microphone', desc: 'Voice chat in your language', color: '#10b981' },
-    { icon: '📍', title: 'Location', desc: 'Live weather + nearby soil labs', color: '#3b82f6' },
-    { icon: '📷', title: 'Camera', desc: 'Crop disease photo diagnosis', color: '#f59e0b' },
+    { icon: <Mic size={22} color="#10b981" />, title: 'Microphone Access', desc: 'Chat naturally in Hindi, Marathi, or English', color: '#10b981' },
+    { icon: <MapPin size={22} color="#3b82f6" />, title: 'Location Services', desc: 'Get live local weather and find nearest soil labs', color: '#3b82f6' },
+    { icon: <CameraIcon size={22} color="#f59e0b" />, title: 'Camera & Gallery', desc: 'Scan and diagnose crop health instantly', color: '#f59e0b' },
   ];
+
   return (
     <Modal transparent animationType="fade" visible statusBarTranslucent>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#0f1923', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-          <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            <Text style={{ fontSize: 52, marginBottom: 10 }}>🌿</Text>
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Aranya ko kaam karne do</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 18 }}>Ye permissions ek baar deni hongi — phir sab automatic</Text>
+      <View style={{ flex: 1, backgroundColor: 'rgba(5, 10, 15, 0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <View style={{
+          backgroundColor: '#0a121a',
+          borderRadius: 24,
+          padding: 24,
+          width: '100%',
+          maxWidth: 380,
+          borderWidth: 1.5,
+          borderColor: 'rgba(16, 185, 129, 0.25)',
+          shadowColor: '#10b981',
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.15,
+          shadowRadius: 24,
+          elevation: 10,
+        }}>
+          {/* Header */}
+          <View style={{ alignItems: 'center', marginBottom: 26 }}>
+            <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(16,185,129,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' }}>
+              <Leaf size={34} color="#10b981" />
+            </View>
+            <Text style={{ color: '#ffffff', fontSize: 22, fontWeight: '800', textAlign: 'center', letterSpacing: 0.2 }}>Aranya Onboarding</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 18, paddingHorizontal: 10 }}>
+              Allow the following permissions to enable real-time local intelligence features.
+            </Text>
           </View>
+
+          {/* Cards */}
           {permissions.map((p, i) => (
-            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: p.color + '20', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                <Text style={{ fontSize: 22 }}>{p.icon}</Text>
+            <View key={i} style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.06)',
+            }}>
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: p.color + '15',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 16,
+                borderWidth: 1,
+                borderColor: p.color + '30',
+              }}>
+                {p.icon}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>{p.title}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginTop: 2 }}>{p.desc}</Text>
-              </View>
-              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>
+                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>{p.title}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 3, lineHeight: 15 }}>{p.desc}</Text>
               </View>
             </View>
           ))}
-          <Pressable onPress={grantAll} style={({ pressed }) => ({ backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 16, opacity: pressed ? 0.85 : 1, shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 })}>
-            {granting ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Allow All & Start Chatting 🚀</Text>}
+
+          {/* Action Button */}
+          <Pressable
+            onPress={grantAll}
+            style={({ pressed }) => ({
+              backgroundColor: '#10b981',
+              borderRadius: 16,
+              paddingVertical: 16,
+              alignItems: 'center',
+              marginTop: 12,
+              opacity: pressed ? 0.9 : 1,
+              shadowColor: '#10b981',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+              elevation: 4,
+            })}>
+            {granting ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 15, letterSpacing: 0.3 }}>
+                Grant Permissions
+              </Text>
+            )}
           </Pressable>
-          <Pressable onPress={onDone} style={{ alignItems: 'center', marginTop: 14 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Skip for now</Text>
+
+          <Pressable onPress={onDone} style={{ alignItems: 'center', marginTop: 16 }}>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: 13, fontWeight: '600' }}>Skip for now</Text>
           </Pressable>
         </View>
       </View>
     </Modal>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════
 // WEATHER CARD (in-chat bubble)
@@ -250,49 +312,111 @@ function WeatherCard({ weather, onClose }: { weather: any; onClose?: () => void 
   if (!weather) return null;
   const emoji = weatherEmoji ? weatherEmoji(weather.condition || '') : '🌤️';
   const rainEntry = weather.forecast?.find((f: any) => f.rain_prob > 50);
+
   return (
-    <View style={{ backgroundColor: '#0f2744', borderRadius: 18, padding: 16, marginVertical: 6, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)', shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 5 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <Text style={{ fontSize: 28, marginRight: 10 }}>{emoji}</Text>
+    <View style={{
+      backgroundColor: '#0a1424',
+      borderRadius: 20,
+      padding: 18,
+      marginVertical: 10,
+      borderWidth: 1.5,
+      borderColor: 'rgba(59, 130, 246, 0.25)',
+      shadowColor: '#3b82f6',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      elevation: 6,
+    }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 32, marginRight: 12 }}>{emoji}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#60a5fa', fontWeight: '700', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Live Weather</Text>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{weather.location}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <CloudSun size={14} color="#60a5fa" style={{ marginRight: 5 }} />
+            <Text style={{ color: '#60a5fa', fontWeight: '800', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.2 }}>Live Weather Update</Text>
+          </View>
+          <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 18, marginTop: 2 }}>{weather.location}</Text>
         </View>
-        {onClose && <Pressable onPress={onClose} style={{ padding: 4 }}><X size={16} color="rgba(255,255,255,0.4)" /></Pressable>}
+        {onClose && (
+          <Pressable onPress={onClose} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10 }}>
+            <X size={14} color="rgba(255,255,255,0.6)" />
+          </Pressable>
+        )}
       </View>
-      <View style={{ flexDirection: 'row', backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+
+      {/* Main Stats Grid */}
+      <View style={{
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255, 255, 255, 0.02)',
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+      }}>
+        {/* Temp */}
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ color: '#93c5fd', fontSize: 11, marginBottom: 2 }}>Temp</Text>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{Math.round(weather.temp)}°C</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>feels {Math.round(weather.feels_like)}°</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '600' }}>Temperature</Text>
+          <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 24, marginVertical: 4 }}>{Math.round(weather.temp)}°C</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '500' }}>Feels {Math.round(weather.feels_like)}°</Text>
         </View>
-        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+        {/* Humidity */}
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ color: '#93c5fd', fontSize: 11, marginBottom: 2 }}>Humidity</Text>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{weather.humidity}%</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{weather.condition}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '600' }}>Humidity</Text>
+          <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 24, marginVertical: 4 }}>{weather.humidity}%</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '500', textAlign: 'center' }} numberOfLines={1}>{weather.condition}</Text>
         </View>
-        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+        {/* Wind */}
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ color: '#93c5fd', fontSize: 11, marginBottom: 2 }}>Wind</Text>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{weather.wind_speed?.toFixed(1)}</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>m/s</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '600' }}>Wind Speed</Text>
+          <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 24, marginVertical: 4 }}>{weather.wind_speed?.toFixed(1)}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '500' }}>m/s</Text>
         </View>
       </View>
+
+      {/* Rain Warning */}
       {rainEntry && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-          <Text style={{ fontSize: 16, marginRight: 8 }}>⚠️</Text>
-          <Text style={{ color: '#fca5a5', fontSize: 12, flex: 1 }}>Rain likely ({Math.round(rainEntry.rain_prob)}%) — fertilizer/spray avoid karo!</Text>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+          borderRadius: 12,
+          padding: 12,
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+        }}>
+          <Text style={{ fontSize: 18, marginRight: 10 }}>🌧️</Text>
+          <Text style={{ color: '#fca5a5', fontSize: 12, fontWeight: '600', flex: 1, lineHeight: 16 }}>
+            Rain forecast of {Math.round(rainEntry.rain_prob)}% soon. Delay any fertilizer spraying operations!
+          </Text>
         </View>
       )}
+
+      {/* Farming Advice */}
       {weather.farming_advice && (
-        <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#10b981' }}>
-          <Text style={{ color: '#6ee7b7', fontSize: 12, lineHeight: 18 }}>🌱 {weather.farming_advice}</Text>
+        <View style={{
+          backgroundColor: 'rgba(16, 185, 129, 0.06)',
+          borderRadius: 14,
+          padding: 14,
+          borderLeftWidth: 4,
+          borderLeftColor: '#10b981',
+          borderWidth: 1,
+          borderColor: 'rgba(16, 185, 129, 0.1)',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Leaf size={14} color="#10b981" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#10b981', fontWeight: '800', fontSize: 12, letterSpacing: 0.5 }}>AGRI ADVISORY</Text>
+          </View>
+          <Text style={{ color: '#a7f3d0', fontSize: 13, lineHeight: 19, fontWeight: '500' }}>{weather.farming_advice}</Text>
         </View>
       )}
     </View>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════
 // SOIL LABS BOTTOM SHEET
@@ -306,49 +430,93 @@ function SoilLabsSheet({ visible, labs, portalUrl, onClose }: { visible: boolean
     Linking.openURL(url).catch(() => Linking.openURL(`https://maps.google.com/?q=${lab.lat},${lab.lon}`));
   };
   const callLab = (phone: string) => Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, '')}`);
+
   return (
     <Modal transparent animationType="slide" visible={visible} statusBarTranslucent onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={onClose} />
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#0f1923', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }} onPress={onClose} />
+      <View style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        backgroundColor: '#0a121a',
+        borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        maxHeight: '85%',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.08)',
+        paddingBottom: 24,
+      }}>
+        {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>🔬 Soil Testing Labs</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 2 }}>Government certified labs near you</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TestTube size={18} color="#10b981" style={{ marginRight: 6 }} />
+              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 18 }}>Soil Testing Labs</Text>
+            </View>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 }}>Government certified labs near your current location</Text>
           </View>
-          <Pressable onPress={onClose}><X size={20} color="rgba(255,255,255,0.5)" /></Pressable>
+          <Pressable onPress={onClose} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
+            <X size={16} color="rgba(255,255,255,0.5)" />
+          </Pressable>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false}>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }}>
           {labs.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
-              <Text style={{ fontSize: 48, marginBottom: 12 }}>🔍</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>No labs found nearby. Check the government portal.</Text>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <MapPin size={28} color="rgba(255,255,255,0.3)" />
+              </View>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', fontSize: 14 }}>No labs found nearby. Use the government portal link below to search.</Text>
             </View>
           ) : labs.map((lab, i) => (
-            <View key={i} style={{ margin: 12, marginTop: i === 0 ? 12 : 0, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                  <Text style={{ fontSize: 18 }}>🏛️</Text>
+            <View key={i} style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.05)',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(16,185,129,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: 'rgba(16,185,129,0.15)' }}>
+                  <Leaf size={18} color="#10b981" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14, flexWrap: 'wrap' }}>{lab.name}</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>{lab.address}</Text>
-                  <Text style={{ color: '#10b981', fontSize: 12, marginTop: 4 }}>📍 {lab.distance_km} km away</Text>
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14, flexWrap: 'wrap' }}>{lab.name}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4, lineHeight: 16 }}>{lab.address}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <MapPin size={11} color="#10b981" />
+                    <Text style={{ color: '#10b981', fontSize: 12, marginLeft: 4, fontWeight: '600' }}>{lab.distance_km} km away</Text>
+                  </View>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Pressable onPress={() => callLab(lab.phone)} style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 10, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
-                  <Text style={{ color: '#10b981', fontWeight: '600', fontSize: 13 }}>📞 Call</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable onPress={() => callLab(lab.phone)} style={({ pressed }) => ({
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 12, paddingVertical: 10,
+                  opacity: pressed ? 0.75 : 1, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)'
+                })}>
+                  <Phone size={13} color="#10b981" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 13 }}>Call Lab</Text>
                 </Pressable>
-                <Pressable onPress={() => openMaps(lab)} style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 10, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
-                  <Text style={{ color: '#60a5fa', fontWeight: '600', fontSize: 13 }}>🗺️ Directions</Text>
+                <Pressable onPress={() => openMaps(lab)} style={({ pressed }) => ({
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'rgba(59,130,246,0.12)', borderRadius: 12, paddingVertical: 10,
+                  opacity: pressed ? 0.75 : 1, borderWidth: 1, borderColor: 'rgba(59,130,246,0.2)'
+                })}>
+                  <Navigation size={13} color="#60a5fa" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#60a5fa', fontWeight: '700', fontSize: 13 }}>Directions</Text>
                 </Pressable>
               </View>
             </View>
           ))}
-          <Pressable onPress={() => Linking.openURL(portalUrl)} style={({ pressed }) => ({ margin: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', opacity: pressed ? 0.7 : 1 })}>
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>🔗 View All Labs on Government Portal</Text>
+          <Pressable onPress={() => Linking.openURL(portalUrl)} style={({ pressed }) => ({
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 14,
+            borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', opacity: pressed ? 0.8 : 1,
+            marginTop: 4,
+          })}>
+            <ExternalLink size={14} color="rgba(255,255,255,0.5)" style={{ marginRight: 8 }} />
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600' }}>View All Labs on Government Portal</Text>
           </Pressable>
-          <View style={{ height: 40 }} />
+          <View style={{ height: 20 }} />
         </ScrollView>
       </View>
     </Modal>
@@ -365,39 +533,99 @@ function SoilHealthCardModal({ visible, profile, onClose, onSave }: { visible: b
   const [potassium, setPotassium] = useState(profile?.soilHealthData?.potassium || '');
   const [ph, setPh] = useState(profile?.soilHealthData?.ph || '');
   const [oc, setOc] = useState(profile?.soilHealthData?.oc || '');
+
   return (
     <Modal transparent animationType="slide" visible={visible} statusBarTranslucent onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#0f1923', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+        <View style={{
+          backgroundColor: '#0a121a',
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          padding: 24, paddingBottom: 40,
+          borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)'
+        }}>
+          {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18, flex: 1 }}>🌱 Soil Health Card</Text>
-            <Pressable onPress={onClose}><X size={20} color="rgba(255,255,255,0.5)" /></Pressable>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              <Leaf size={18} color="#10b981" style={{ marginRight: 6 }} />
+              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 18 }}>Soil Health Card</Text>
+            </View>
+            <Pressable onPress={onClose} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
+              <X size={16} color="rgba(255,255,255,0.5)" />
+            </Pressable>
           </View>
-          <Pressable onPress={() => Linking.openURL('https://www.soilhealth.dac.gov.in/soilhealthcard')} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', opacity: pressed ? 0.7 : 1 })}>
-            <Text style={{ fontSize: 20, marginRight: 10 }}>🏛️</Text>
+
+          {/* Portal button */}
+          <Pressable onPress={() => Linking.openURL('https://www.soilhealth.dac.gov.in/soilhealthcard')} style={({ pressed }) => ({
+            flexDirection: 'row', alignItems: 'center',
+            backgroundColor: 'rgba(16,185,129,0.08)',
+            borderRadius: 16, padding: 14, marginBottom: 22,
+            borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)', opacity: pressed ? 0.8 : 1,
+          })}>
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(16,185,129,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <ExternalLink size={18} color="#10b981" />
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#10b981', fontWeight: '600', fontSize: 14 }}>Get Your Soil Health Card</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>View on Government Portal →</Text>
+              <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>Get Your Soil Health Card</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>View/Download on Government Portal →</Text>
             </View>
           </Pressable>
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 12 }}>Or enter your card values manually:</Text>
-          <TextInput value={cardId} onChangeText={setCardId} placeholder="Soil Health Card ID (optional)" placeholderTextColor="rgba(255,255,255,0.25)" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 12, color: '#fff', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-            {[{label: 'N (Nitrogen)', val: nitrogen, set: setNitrogen, unit: 'kg/ha'},{label: 'P (Phosphorus)', val: phosphorus, set: setPhosphorus, unit: 'kg/ha'},{label: 'K (Potassium)', val: potassium, set: setPotassium, unit: 'kg/ha'},{label: 'pH', val: ph, set: setPh, unit: ''},{label: 'OC %', val: oc, set: setOc, unit: '%'}].map((field, i) => (
-              <View key={i} style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginBottom: 4 }}>{field.label}</Text>
-                <TextInput value={field.val} onChangeText={field.set} placeholder="--" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="numeric" style={{ color: '#10b981', fontWeight: '700', fontSize: 18, padding: 0 }} />
+
+          <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: '600', marginBottom: 12 }}>Or enter nutrient values manually:</Text>
+          
+          <TextInput
+            value={cardId} onChangeText={setCardId}
+            placeholder="Soil Health Card ID (optional)"
+            placeholderTextColor="rgba(255,255,255,0.25)"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.03)',
+              borderRadius: 12, padding: 14,
+              color: '#ffffff', marginBottom: 12,
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+              fontWeight: '600', fontSize: 14,
+            }}
+          />
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+            {[
+              { label: 'Nitrogen (N)', val: nitrogen, set: setNitrogen, unit: 'kg/ha' },
+              { label: 'Phosphorus (P)', val: phosphorus, set: setPhosphorus, unit: 'kg/ha' },
+              { label: 'Potassium (K)', val: potassium, set: setPotassium, unit: 'kg/ha' },
+              { label: 'Soil pH', val: ph, set: setPh, unit: '' },
+              { label: 'Org Carbon (OC)', val: oc, set: setOc, unit: '%' }
+            ].map((field, i) => (
+              <View key={i} style={{
+                width: i === 4 ? '100%' : '48%',
+                backgroundColor: 'rgba(255,255,255,0.02)',
+                borderRadius: 12, padding: 12,
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)'
+              }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>{field.label}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
+                  <TextInput
+                    value={field.val} onChangeText={field.set}
+                    placeholder="--" placeholderTextColor="rgba(255,255,255,0.15)"
+                    keyboardType="numeric"
+                    style={{ color: '#10b981', fontWeight: '800', fontSize: 18, padding: 0, minWidth: 40 }}
+                  />
+                  {field.unit ? <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginLeft: 4 }}>{field.unit}</Text> : null}
+                </View>
               </View>
             ))}
           </View>
-          <Pressable onPress={() => onSave({ soilHealthCardId: cardId, soilHealthData: { nitrogen, phosphorus, potassium, ph, oc } })} style={({ pressed }) => ({ backgroundColor: '#10b981', borderRadius: 14, paddingVertical: 14, alignItems: 'center', opacity: pressed ? 0.85 : 1 })}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Save & Use for AI Advice 🌱</Text>
+
+          <Pressable onPress={() => onSave({ soilHealthCardId: cardId, soilHealthData: { nitrogen, phosphorus, potassium, ph, oc } })} style={({ pressed }) => ({
+            backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 16,
+            alignItems: 'center', opacity: pressed ? 0.9 : 1,
+            shadowColor: '#10b981', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4,
+          })}>
+            <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 15, letterSpacing: 0.3 }}>Save Soil Data</Text>
           </Pressable>
         </View>
       </View>
     </Modal>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════
 // TYPES
@@ -1845,48 +2073,6 @@ export default function Dashboard() {
             </View>
           </View>
           <View style={cs.headerRight}>
-            {/* Live weather badge */}
-            {weatherData && (
-              <Pressable
-                onPress={() => setShowWeatherCard(v => !v)}
-                style={({ pressed }) => ({
-                  flexDirection: 'row', alignItems: 'center',
-                  backgroundColor: 'rgba(59,130,246,0.15)',
-                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
-                  marginRight: 6, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)',
-                  opacity: pressed ? 0.8 : 1,
-                })}>
-                <Text style={{ fontSize: 14, marginRight: 4 }}>🌡️</Text>
-                <Text style={{ color: '#93c5fd', fontWeight: '700', fontSize: 13 }}>{Math.round(weatherData.temp)}°</Text>
-              </Pressable>
-            )}
-            {/* Soil labs quick button */}
-            <Pressable
-              onPress={async () => {
-                if (soilLabs.length === 0 && userLocation) {
-                  const result = await fetchSoilLabs(userLocation.lat, userLocation.lon, 5);
-                  if (result) { setSoilLabs(result.labs || []); setSoilLabsPortalUrl(result.portal_url || soilLabsPortalUrl); }
-                }
-                setShowSoilLabs(true);
-              }}
-              style={({ pressed }) => ({
-                backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 20, padding: 7,
-                marginRight: 4, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
-                opacity: pressed ? 0.8 : 1,
-              })}>
-              <Text style={{ fontSize: 16 }}>🔬</Text>
-            </Pressable>
-            {/* Soil health card button */}
-            <Pressable
-              onPress={() => setShowSoilHealthCard(true)}
-              style={({ pressed }) => ({
-                backgroundColor: userProfile?.soilHealthData?.nitrogen ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.08)',
-                borderRadius: 20, padding: 7, marginRight: 4,
-                borderWidth: 1, borderColor: userProfile?.soilHealthData?.nitrogen ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)',
-                opacity: pressed ? 0.8 : 1,
-              })}>
-              <Text style={{ fontSize: 16 }}>🌱</Text>
-            </Pressable>
             <Pressable style={cs.phoneButton} onPress={toggleVoiceMode}>
               <Phone color="#000" size={22} />
             </Pressable>
@@ -1907,16 +2093,46 @@ export default function Dashboard() {
         <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
           <Pressable style={cs.menuOverlay} onPress={() => setMenuVisible(false)}>
             <Animated.View entering={FadeIn.duration(150)} style={cs.menuDropdown}>
+              {/* Live weather toggler */}
+              <Pressable style={cs.menuItem} onPress={() => { setMenuVisible(false); setShowWeatherCard(v => !v); }}>
+                <CloudSun color="#374151" size={18} />
+                <Text style={cs.menuItemText}>Weather Report</Text>
+              </Pressable>
+              <View style={cs.menuDivider} />
+
+              {/* Nearest Soil Labs */}
+              <Pressable style={cs.menuItem} onPress={async () => {
+                setMenuVisible(false);
+                if (soilLabs.length === 0 && userLocation) {
+                  const result = await fetchSoilLabs(userLocation.lat, userLocation.lon, 5);
+                  if (result) { setSoilLabs(result.labs || []); setSoilLabsPortalUrl(result.portal_url || soilLabsPortalUrl); }
+                }
+                setShowSoilLabs(true);
+              }}>
+                <TestTube color="#374151" size={18} />
+                <Text style={cs.menuItemText}>Soil Testing Labs</Text>
+              </Pressable>
+              <View style={cs.menuDivider} />
+
+              {/* Soil Health Card */}
+              <Pressable style={cs.menuItem} onPress={() => { setMenuVisible(false); setShowSoilHealthCard(true); }}>
+                <Leaf color="#374151" size={18} />
+                <Text style={cs.menuItemText}>Soil Health Card</Text>
+              </Pressable>
+              <View style={cs.menuDivider} />
+
               <Pressable style={cs.menuItem} onPress={handleClearChat}>
                 <Trash2 color="#374151" size={18} />
                 <Text style={cs.menuItemText}>Clear Chat</Text>
               </Pressable>
               <View style={cs.menuDivider} />
+              
               <Pressable style={cs.menuItem} onPress={handleReport}>
                 <Flag color="#374151" size={18} />
                 <Text style={cs.menuItemText}>Report Issue</Text>
               </Pressable>
               <View style={cs.menuDivider} />
+              
               <Pressable style={cs.menuItem} onPress={handleLogout}>
                 <LogOut color="#ef4444" size={18} />
                 <Text style={[cs.menuItemText, { color: '#ef4444' }]}>Logout</Text>
