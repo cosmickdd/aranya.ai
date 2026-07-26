@@ -812,15 +812,7 @@ export default function Dashboard() {
   // ── Voice Recording via expo-audio (Universal) ──
   const startRecording = async () => {
     try {
-      try {
-        await setAudioModeAsync({
-          allowsRecording: true,
-          playsInSilentMode: true,
-        });
-      } catch (modeErr) {
-        console.warn('setAudioModeAsync error:', modeErr);
-      }
-
+      // Step 1: Request permission FIRST
       let permission = await requestRecordingPermissionsAsync();
       let isGranted = permission.status === 'granted' || permission.granted === true;
 
@@ -832,11 +824,21 @@ export default function Dashboard() {
       if (!isGranted) {
         Alert.alert(
           'Microphone Permission Required',
-          'Aranya needs microphone access for voice chat. Please enable Microphone permissions for Aranya AI in your phone Settings -> Apps -> Aranya AI -> Permissions.',
+          'Aranya needs microphone access for voice chat. Please enable Microphone permissions for Aranya AI in your phone Settings → Apps → Aranya AI → Permissions.',
           [{ text: 'OK' }]
         );
         setVoiceState('idle');
         return;
+      }
+
+      // Step 2: Set audio mode AFTER permission granted
+      try {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+      } catch (modeErr) {
+        console.warn('setAudioModeAsync error:', modeErr);
       }
 
       setVoiceState('listening');
@@ -879,11 +881,19 @@ export default function Dashboard() {
 
   const startVoiceNoteRecording = async () => {
     try {
-      const permission = await requestRecordingPermissionsAsync();
-      if (permission.status !== 'granted') {
+      // Same dual-check as startRecording to handle Expo 52 permission schema
+      let permission = await requestRecordingPermissionsAsync();
+      let isGranted = permission.status === 'granted' || permission.granted === true;
+
+      if (!isGranted && AudioModule?.requestRecordingPermissionsAsync) {
+        permission = await AudioModule.requestRecordingPermissionsAsync();
+        isGranted = permission.status === 'granted' || permission.granted === true;
+      }
+
+      if (!isGranted) {
         Alert.alert(
           'Microphone Permission Required',
-          'Aranya needs microphone access to record voice messages.',
+          'Aranya needs microphone access to record voice messages. Please enable it in Settings → Apps → Aranya AI → Permissions.',
           [{ text: 'OK' }]
         );
         return;
