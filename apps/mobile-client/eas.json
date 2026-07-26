@@ -19,7 +19,7 @@
       }
     },
     "preview": {
-      "node": "20.14.0",
+      "node": "20.19.4",
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAvlYHyX4VmAjkS6U9npybQCTjwK6sr55Y",
@@ -37,7 +37,7 @@
       }
     },
     "production": {
-      "node": "20.14.0",
+      "node": "20.19.4",
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAvlYHyX4VmAjkS6U9npybQCTjwK6sr55Y",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "aranya-d4d64.firebaseapp.com",
