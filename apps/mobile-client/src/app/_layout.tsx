@@ -4,8 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
-import { getFirebaseAuth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { subscribeToAuthChanges } from '../lib/firebase';
 
 try {
   SplashScreen.preventAutoHideAsync();
@@ -34,8 +33,7 @@ export default function Layout() {
   useEffect(() => {
     if (!loaded) return;
 
-    const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = subscribeToAuthChanges((user) => {
       if (user) {
         // If user is logged in and not already on the dashboard, auto-redirect to dashboard
         const currentSegment = segments[0];
@@ -56,6 +54,7 @@ export default function Layout() {
     <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#ffffff' } }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="language" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
